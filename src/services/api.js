@@ -6,9 +6,10 @@ import debounce from 'lodash/debounce';
 
 // Track the current getAllNotes request
 let currentNotesRequest = null;
+let backendURL = import.meta.env.VITE_BACKEND_URL;
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api',
+  baseURL: `${backendURL}/api`|| 'http://localhost:5000/api',
   headers: {
     'Content-Type': 'application/json',
   },
