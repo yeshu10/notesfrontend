@@ -200,19 +200,19 @@ const NoteEditor = () => {
     }
   };
 
-  const handleSave = async () => {
-    try {
-      setIsSaving(true);
-      const data = await notesAPI.updateNote(id, { title, content });
-      dispatch(updateNote(data));
-      setLastSaved(new Date());
-      toast.success('Note saved successfully');
-    } catch (error) {
-      toast.error('Error saving note');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  // const handleSave = async () => {
+  //   try {
+  //     setIsSaving(true);
+  //     const data = await notesAPI.updateNote(id, { title, content });
+  //     dispatch(updateNote(data));
+  //     setLastSaved(new Date());
+  //     toast.success('Note saved successfully');
+  //   } catch (error) {
+  //     toast.error('Error saving note');
+  //   } finally {
+  //     setIsSaving(false);
+  //   }
+  // };
 
   const handleShare = async (e) => {
     e.preventDefault();
@@ -389,14 +389,14 @@ const NoteEditor = () => {
               ) : (
                 <span className="text-sm text-gray-500">Last saved: {lastSaved.toLocaleTimeString()}</span>
               )}
-              {effectiveCanEdit && (
+              {/* {effectiveCanEdit && (
                 <button
                   onClick={handleSave}
                   className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
                 >
                   Save
                 </button>
-              )}
+              )} */}
               {isCreatorOfNote && (
                 <button
                   onClick={() => setShowShareModal(true)}
