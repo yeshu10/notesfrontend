@@ -3,6 +3,8 @@ import { store } from '../store';
 import { updateNote } from '../store/slices/notesSlice';
 import toast from 'react-hot-toast';
 
+const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+
 let socket = null;
 let currentNoteId = null;
 
@@ -18,7 +20,7 @@ export const initializeSocket = (token) => {
     socket = null;
   }
 
-  socket = io('http://localhost:5000', {
+  socket = io(backendURL, {
     auth: { token },
     reconnection: true,
     reconnectionDelay: 1000,
