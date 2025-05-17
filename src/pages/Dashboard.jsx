@@ -24,6 +24,7 @@ const Dashboard = () => {
   const [isFetching, setIsFetching] = useState(false);
   const initialFetchDone = useRef(false);
   const [pageLoading, setPageLoading] = useState(true);
+    const [noteToDelete, setNoteToDelete] = useState(null);
 
   // Initialization effect for Dashboard
   useEffect(() => {
@@ -154,16 +155,35 @@ const Dashboard = () => {
     navigate('/login');
   };
 
+  // const handleDeleteNote = async (noteId) => {
+  //   if (window.confirm('Are you sure you want to delete this note?')) {
+  //     try {
+  //       await notesAPI.deleteNote(noteId);
+  //       dispatch(removeNote(noteId));
+  //       toast.success('Note deleted successfully');
+  //     } catch (error) {
+  //       console.error('Delete note error:', error);
+  //       toast.error(error.message || 'Error deleting note');
+  //     }
+  //   }
+  // };
+
   const handleDeleteNote = async (noteId) => {
-    if (window.confirm('Are you sure you want to delete this note?')) {
-      try {
-        await notesAPI.deleteNote(noteId);
-        dispatch(removeNote(noteId));
-        toast.success('Note deleted successfully');
-      } catch (error) {
-        console.error('Delete note error:', error);
-        toast.error(error.message || 'Error deleting note');
-      }
+    try {
+      await notesAPI.deleteNote(noteId);
+      dispatch(removeNote(noteId));
+      toast.success('Note deleted successfully');
+    } catch (error) {
+      console.error('Delete note error:', error);
+      toast.error(error.message || 'Error deleting note');
+    }
+  };
+
+  // Called when user confirms delete in modal
+  const confirmDelete = () => {
+    if (noteToDelete) {
+      handleDeleteNote(noteToDelete);
+      setNoteToDelete(null); // close modal
     }
   };
 
@@ -220,7 +240,8 @@ const Dashboard = () => {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            handleDeleteNote(note._id);
+             
+                  setNoteToDelete(note._id);
           }}
           className="ml-2 text-white hover:text-red-300 p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-white"
           title="Delete Note"
@@ -361,7 +382,33 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+
+      {noteToDelete && (
+        <div className="fixed inset-0 bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50">
+  <div className="bg-white rounded-xl p-6 max-w-sm w-full shadow-xl border border-gray-200">
+    <h2 className="text-xl font-semibold mb-4 text-gray-800">Confirm Delete</h2>
+    <p className="mb-6 text-gray-600">Are you sure you want to delete this note?</p>
+    <div className="flex justify-end space-x-4">
+      <button
+        onClick={() => setNoteToDelete(null)}
+        className="px-5 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
+      >
+        Cancel
+      </button>
+      <button
+        onClick={confirmDelete}
+        className="px-5 py-2 rounded-lg bg-red-400 text-white hover:bg-red-500 transition"
+      >
+        Yes, Delete
+      </button>
     </div>
+  </div>
+</div>
+
+      )}
+      
+    </div>
+    
   );
 };
 
