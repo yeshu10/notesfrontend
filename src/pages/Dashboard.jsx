@@ -321,67 +321,79 @@ const Dashboard = () => {
         </div>
       </main>
 
+      
+
       {showCreateModal && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Create New Note</h3>
-            <form onSubmit={handleCreateNote}>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-                    Title
-                  </label>
-                  <input
-                    id="title"
-                    type="text"
-                    value={newNoteTitle}
-                    onChange={(e) => setNewNoteTitle(e.target.value)}
-                    placeholder="Note title"
-                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="content" className="block text-sm font-medium text-gray-700">
-                    Initial Content
-                  </label>
-                  <textarea
-                    id="content"
-                    value={newNoteContent}
-                    onChange={(e) => setNewNoteContent(e.target.value)}
-                    placeholder="Start writing..."
-                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    rows={4}
-                  />
-                </div>
-              </div>
-              <div className="mt-4 flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    setNewNoteTitle('');
-                    setNewNoteContent('');
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className={`px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 ${
-                    isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Creating...' : 'Create'}
-                </button>
-              </div>
-            </form>
+  <div className="fixed inset-0 bg-white/60 backdrop-blur-md flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg p-8 max-w-lg w-full max-h-[80vh] overflow-auto shadow-lg">
+      <h3 className="text-xl font-semibold text-indigo-500 mb-6">
+        Create New Note
+      </h3>
+      <form onSubmit={handleCreateNote}>
+        <div className="space-y-6">
+          <div>
+            <label
+              htmlFor="title"
+              className="block text-sm font-medium text-indigo-700"
+            >
+              Title
+            </label>
+            <input
+              id="title"
+              type="text"
+              value={newNoteTitle}
+              onChange={(e) => setNewNoteTitle(e.target.value)}
+              placeholder="Note title"
+              className="mt-2 w-full px-4 py-3 border border-indigo-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+              required
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="content"
+              className="block text-sm font-medium text-indigo-700"
+            >
+              Initial Content
+            </label>
+            <textarea
+              id="content"
+              value={newNoteContent}
+              onChange={(e) => setNewNoteContent(e.target.value)}
+              placeholder="Start writing..."
+              className="mt-2 w-full px-4 py-3 border border-indigo-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+              rows={5}
+            />
           </div>
         </div>
-      )}
+        <div className="mt-8 flex justify-end space-x-3">
+          <button
+            type="button"
+            onClick={() => {
+              setShowCreateModal(false);
+              setNewNoteTitle('');
+              setNewNoteContent('');
+            }}
+            className="px-5 py-2 text-sm font-medium text-indigo-700 hover:text-indigo-900 bg-indigo-100 rounded-md transition"
+            disabled={isSubmitting}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className={`px-5 py-2 text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 transition ${
+              isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Creating...' : 'Create'}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
+
+
 
       {noteToDelete && (
         <div className="fixed inset-0 bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50">
