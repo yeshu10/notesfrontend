@@ -126,7 +126,7 @@ const Dashboard = () => {
       toast.error('Title is required');
       return;
     }
-
+ 
     setIsSubmitting(true);
     try {
       console.log('Creating new note:', { title: newNoteTitle, content: newNoteContent || 'New note' });
@@ -202,53 +202,66 @@ const Dashboard = () => {
             <div className="text-center">Loading...</div>
           ) : notes && notes.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {notes.map((note) => (
-                  <div
-                    key={note._id}
-                    className="bg-white overflow-hidden shadow rounded-lg hover:shadow-md transition-shadow duration-200"
-                  >
-                    <div 
-                      className="px-4 py-5 sm:p-6 cursor-pointer"
-                      onClick={() => navigate(`/notes/${note._id}`)}
-                    >
-                      <h3 className="text-lg font-medium text-gray-900 truncate">
-                        {note.title}
-                      </h3>
-                      <div className="mt-2">
-                        <p className="text-sm text-gray-500">
-                          Last updated: {new Date(note.lastUpdated).toLocaleDateString()}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Collaborators: {note.collaborators.length}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="px-4 py-3 bg-gray-50 flex justify-end space-x-2">
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/notes/${note._id}?share=true`);
-                        }}
-                        className="text-blue-600 hover:text-blue-800 p-1"
-                        title="Share Note"
-                      >
-                        <FaShare />
-                      </button>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteNote(note._id);
-                        }}
-                        className="text-red-600 hover:text-red-800 p-1"
-                        title="Delete Note"
-                      >
-                        <FaTrash />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+      
+
+<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+  {notes.map((note) => (
+    <div
+      key={note._id}
+      className="bg-white overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow duration-300 flex flex-col justify-between"
+    >
+      {/* Title bar with gradient, title text, delete button, date, collaborators */}
+      <div className="relative bg-gradient-to-r from-blue-400 via-pink-200 to-purple-400 rounded-t-lg px-4 py-3 flex items-center justify-between text-white">
+        <h3 className="text-lg font-semibold truncate max-w-[calc(100%-3rem)]">
+          {note.title}
+        </h3>
+
+        {/* Delete Button inside title bar */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDeleteNote(note._id);
+          }}
+          className="ml-2 text-white hover:text-red-300 p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-white"
+          title="Delete Note"
+        >
+          <FaTrash />
+        </button>
+      </div>
+
+      {/* Clickable content area */}
+       <div
+        className="px-4 py-5 cursor-pointer flex-grow"
+        onClick={() => navigate(`/notes/${note._id}`)}
+      >
+        {/* First line of note content */}
+        <p className="text-gray-700 truncate">{note.content.split('\n')[0]}</p>
+      </div>
+
+      {/* Bottom bar with last updated time on bottom-left and share button bottom-right */}
+      <div className="px-4 py-3 bg-gray-50 flex justify-between items-center text-gray-500 text-xs">
+        <span>
+          {new Date(note.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </span>
+         <span className="flex items-center justify-center w-6 h-6 bg-indigo-500 text-white text-xs font-semibold rounded-full">
+          {note.collaborators.length}
+        </span>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/notes/${note._id}?share=true`);
+          }}
+          className="text-blue-600 hover:text-blue-800 p-1 rounded-full bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          title="Share Note"
+        >
+          <FaShare />
+        </button>
+      </div>
+    </div>
+  ))}
+</div>
+
+
 
               {/* Pagination */}
               {pagination && pagination.totalPages > 1 && (
