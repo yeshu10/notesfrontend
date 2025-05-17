@@ -92,7 +92,7 @@ const NoteEditor = () => {
       } finally {
         setIsSaving(false);
       }
-    }, 1000),
+    }, 500), // Reduced from 1000ms to 500ms for better responsiveness
     []
   );
 
@@ -134,23 +134,23 @@ const NoteEditor = () => {
       // Only update our local state if:
       // 1. This is the first load
       // 2. We're getting real-time updates from others (not our own edits)
-      if (isFirstLoad.current || 
-          (title !== currentNote.title || content !== currentNote.content)) {
-        
+      if (isFirstLoad.current) {
+        // First load - always update local state
         setTitle(currentNote.title);
         setContent(currentNote.content);
         setLoading(false);
-        
-        if (isFirstLoad.current) {
-          isFirstLoad.current = false;
-          console.log('Initial note data loaded');
-        } else {
-          // We'll receive notification through socket.io notification event
-          console.log('Note was updated remotely');
-        }
+        isFirstLoad.current = false;
+        console.log('Initial note data loaded');
+      } else if (currentNote.lastUpdated && 
+                 lastSaved.getTime() < new Date(currentNote.lastUpdated).getTime()) {
+        // This is an update from someone else - apply it to our local state
+        // We check if the update timestamp is newer than our last save to avoid overwriting our changes
+        console.log('Remote update detected - applying changes');
+        setTitle(currentNote.title);
+        setContent(currentNote.content);
       }
     }
-  }, [currentNote]);
+  }, [currentNote, lastSaved]);
 
   const fetchNote = async () => {
     try {
@@ -180,7 +180,7 @@ const NoteEditor = () => {
 
   const handleTitleChange = (e) => {
     const newTitle = e.target.value;
-    setTitle(newTitle);
+    setTitle(newTitle); // Immediate local update for responsive typing
     
     // Always trigger save for any change if we have edit permissions
     if (effectiveCanEdit) {
@@ -191,7 +191,7 @@ const NoteEditor = () => {
 
   const handleContentChange = (e) => {
     const newContent = e.target.value;
-    setContent(newContent);
+    setContent(newContent); // Immediate local update for responsive typing
     
     // Always trigger save for any change if we have edit permissions
     if (effectiveCanEdit) {

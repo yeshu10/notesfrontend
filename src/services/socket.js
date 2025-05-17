@@ -2,6 +2,7 @@ import { io } from 'socket.io-client';
 import { store } from '../store';
 import { updateNote } from '../store/slices/notesSlice';
 import toast from 'react-hot-toast';
+import throttle from 'lodash/throttle';
 
 const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
@@ -23,10 +24,10 @@ export const initializeSocket = (token) => {
   socket = io(backendURL, {
     auth: { token },
     reconnection: true,
-    reconnectionDelay: 1000,
-    reconnectionDelayMax: 5000,
+    reconnectionDelay: 500,
+    reconnectionDelayMax: 3000,
     reconnectionAttempts: 10,
-    timeout: 20000,
+    timeout: 10000,
     forceNew: true,
     transports: ['websocket', 'polling']
   });
@@ -82,14 +83,14 @@ export const leaveNoteRoom = (noteId) => {
   console.log('Leaving note room:', noteId);
 };
 
-export const updateNoteInRealTime = (noteId, content, title) => {
+export const updateNoteInRealTime = throttle((noteId, content, title) => {
   if (!socket?.connected) {
     console.warn('Socket not connected when trying to update note');
     return;
   }
   socket.emit('note-update', { noteId, content, title });
-  console.log('Sending note update:', { noteId, content, title });
-};
+  console.log('Sending note update:', { noteId });
+}, 150);
 
 export const disconnectSocket = () => {
   if (socket) {
