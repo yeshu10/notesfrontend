@@ -7,6 +7,7 @@ import { logout, setCredentials } from '../store/slices/authSlice';
 import { disconnectSocket, initializeSocket } from '../services/socket';
 import toast from 'react-hot-toast';
 import { FaShare, FaTrash } from 'react-icons/fa';
+import { LuNotebookPen } from "react-icons/lu";
 import Navbar from '../components/Navbar';
 
 const Dashboard = () => {
@@ -185,13 +186,16 @@ const Dashboard = () => {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">My Notes</h2>
+            <h2 className="text-2xl font-bold text-pink-400">My Notes</h2>
+            
+
             <button
-              onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-            >
-              Create New Note
-            </button>
+  onClick={() => setShowCreateModal(true)}
+  className="flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-400 hover:bg-indigo-700"
+>
+  <LuNotebookPen className="text-lg" />
+  Note
+</button>
           </div>
 
           {loading ? (
@@ -278,7 +282,7 @@ const Dashboard = () => {
               )}
             </>
           ) : (
-            <div className="text-center text-gray-500">No notes found</div>
+            <div className="text-center text-lime-500">Looks like you haven't written any notes yet. Let's get those ideas flowing!</div>
           )}
         </div>
       </main>

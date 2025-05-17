@@ -5,6 +5,7 @@ import { notesAPI } from '../services/api';
 import { setCurrentNote, updateNote } from '../store/slices/notesSlice';
 import { joinNoteRoom, leaveNoteRoom, updateNoteInRealTime } from '../services/socket';
 import toast from 'react-hot-toast';
+import { AiOutlineArrowLeft } from 'react-icons/ai';
 import debounce from 'lodash/debounce';
 
 const NoteEditor = () => {
@@ -21,6 +22,7 @@ const NoteEditor = () => {
   const [sharePermission, setSharePermission] = useState('read');
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [lastSaved, setLastSaved] = useState(new Date());
   const [forceEditMode, setForceEditMode] = useState(false);
   const [activeUsers, setActiveUsers] = useState([]);
@@ -216,6 +218,19 @@ const NoteEditor = () => {
 
   const handleShare = async (e) => {
     e.preventDefault();
+    
+    // Validate that the note has content before sharing
+    if (!title.trim()) {
+      toast.error('Cannot share a note without a title');
+      return;
+    }
+    
+    if (!shareEmail.trim()) {
+      toast.error('Please enter an email address to share with');
+      return;
+    }
+    
+    setIsSharing(true);
     try {
       const data = await notesAPI.shareNote(id, shareEmail, sharePermission);
       dispatch(updateNote(data));
@@ -224,6 +239,8 @@ const NoteEditor = () => {
       toast.success(`Note shared with ${shareEmail}`);
     } catch (error) {
       toast.error(error.message || 'Error sharing note');
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -372,7 +389,7 @@ const NoteEditor = () => {
                 onClick={() => navigate('/')}
                 className="text-gray-700 hover:text-gray-900"
               >
-                Back
+               <AiOutlineArrowLeft className="text-xl" />
               </button>
               <input
                 type="text"
@@ -464,7 +481,7 @@ const NoteEditor = () => {
         </div>
       </main>
 
-      {/* Share Modal - same as before */}
+      {/* Share Modal */}
       {showShareModal && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
           <div className="bg-white rounded-lg p-6 max-w-sm w-full">
@@ -482,7 +499,10 @@ const NoteEditor = () => {
                     onChange={(e) => setShareEmail(e.target.value)}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     required
+                    placeholder="Enter email of registered user"
+                    disabled={isSharing}
                   />
+                  <p className="text-xs text-gray-500 mt-1">User must be registered in the system</p>
                 </div>
                 <div>
                   <label htmlFor="permission" className="block text-sm font-medium text-gray-700">
@@ -493,6 +513,7 @@ const NoteEditor = () => {
                     value={sharePermission}
                     onChange={(e) => setSharePermission(e.target.value)}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    disabled={isSharing}
                   >
                     <option value="read">Read only</option>
                     <option value="write">Can edit</option>
@@ -504,14 +525,16 @@ const NoteEditor = () => {
                   type="button"
                   onClick={() => setShowShareModal(false)}
                   className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                  disabled={isSharing}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                  className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isSharing}
                 >
-                  Share
+                  {isSharing ? 'Sharing...' : 'Share'}
                 </button>
               </div>
             </form>
