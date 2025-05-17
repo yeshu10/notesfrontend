@@ -149,9 +149,24 @@ export const notesAPI = {
   },
   shareNote: async (id, email, permission) => {
     try {
+      console.log(`Sharing note ${id} with ${email}, permission: ${permission}`);
       const response = await api.post(`/notes/${id}/share`, { email, permission });
+      console.log('Share successful:', response.data);
       return response.data;
     } catch (error) {
+      console.error('Share note error:', error);
+      // Provide more specific error messages
+      if (error.response?.status === 404) {
+        if (error.response?.data?.message === 'User not found') {
+          throw new Error(`User with email ${email} is not registered in the system. They need to create an account first.`);
+        } else {
+          throw new Error('Note or user not found');
+        }
+      } else if (error.response?.status === 403) {
+        throw new Error('You do not have permission to share this note');
+      } else if (error.response?.status === 500) {
+        throw new Error('Server error while sharing note. Please try again later.');
+      }
       throw new Error(error.response?.data?.message || 'Failed to share note');
     }
   },
