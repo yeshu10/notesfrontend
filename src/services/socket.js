@@ -88,9 +88,17 @@ export const updateNoteInRealTime = throttle((noteId, content, title) => {
     console.warn('Socket not connected when trying to update note');
     return;
   }
-  socket.emit('note-update', { noteId, content, title });
-  console.log('Sending note update:', { noteId });
-}, 150);
+  
+  // Emit the update immediately
+  socket.volatile.emit('note-update', { 
+    noteId, 
+    content, 
+    title,
+    timestamp: Date.now() // Add timestamp for better sync
+  });
+  
+  console.log('Sending note update:', { noteId, timestamp: Date.now() });
+}, 100); // Reduced from 150ms to 100ms for better responsiveness
 
 export const disconnectSocket = () => {
   if (socket) {

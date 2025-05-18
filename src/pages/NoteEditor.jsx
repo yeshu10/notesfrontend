@@ -50,7 +50,7 @@ const NoteEditor = () => {
     return clean1 === clean2;
   }, []);
 
-  // Improved debounced save function with error handling and retry logic
+  
   const debouncedSave = useCallback(
     debounce(async (noteId, newContent, newTitle) => {
       try {
@@ -62,17 +62,22 @@ const NoteEditor = () => {
         setIsSaving(true);
         console.log('Auto-saving note:', { noteId, newTitle });
         
-        // Update in real-time via socket first for instant collaboration
+       
         updateNoteInRealTime(noteId, newContent, newTitle);
         
-        // Then save to database (this ensures data is persisted)
+       
+        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay to prevent race conditions
         const data = await notesAPI.updateNote(noteId, { 
           title: newTitle, 
           content: newContent 
         });
         
         // Update local state
-        dispatch(updateNote(data));
+        dispatch(updateNote({
+          ...data,
+          content: newContent, 
+          title: newTitle 
+        }));
         setLastSaved(new Date());
         console.log('Auto-save completed successfully');
       } catch (error) {
@@ -94,7 +99,7 @@ const NoteEditor = () => {
       } finally {
         setIsSaving(false);
       }
-    }, 500), // Reduced from 1000ms to 500ms for better responsiveness
+    }, 300), // Reduced from 500ms to 300ms for better responsiveness
     []
   );
 
@@ -127,32 +132,38 @@ const NoteEditor = () => {
     };
   }, [id, location.search]);
 
-  // Sync note data to local state, but only if it's the first load
-  // or if title/content haven't been edited
+  // Sync note data to local state
   useEffect(() => {
     if (currentNote) {
       console.log('Current note updated in Redux:', currentNote._id);
       
-      // Only update our local state if:
-      // 1. This is the first load
-      // 2. We're getting real-time updates from others (not our own edits)
+      // Always reset state when note ID changes
+      if (id !== currentNote._id) {
+        setTitle(currentNote.title || '');
+        setContent(currentNote.content || '');
+        setLoading(false);
+        isFirstLoad.current = false;
+        console.log('Note ID changed - resetting state');
+        return;
+      }
+      
+      // Handle updates for the current note
       if (isFirstLoad.current) {
         // First load - always update local state
-        setTitle(currentNote.title);
-        setContent(currentNote.content);
+        setTitle(currentNote.title || '');
+        setContent(currentNote.content || '');
         setLoading(false);
         isFirstLoad.current = false;
         console.log('Initial note data loaded');
       } else if (currentNote.lastUpdated && 
                  lastSaved.getTime() < new Date(currentNote.lastUpdated).getTime()) {
         // This is an update from someone else - apply it to our local state
-        // We check if the update timestamp is newer than our last save to avoid overwriting our changes
         console.log('Remote update detected - applying changes');
-        setTitle(currentNote.title);
-        setContent(currentNote.content);
+        setTitle(currentNote.title || '');
+        setContent(currentNote.content || '');
       }
     }
-  }, [currentNote, lastSaved]);
+  }, [currentNote, lastSaved, id]);
 
   const fetchNote = async () => {
     try {
@@ -184,7 +195,7 @@ const NoteEditor = () => {
     const newTitle = e.target.value;
     setTitle(newTitle); // Immediate local update for responsive typing
     
-    // Always trigger save for any change if we have edit permissions
+    
     if (effectiveCanEdit) {
       console.log('Triggering save for title change');
       debouncedSave(id, content, newTitle);
@@ -195,26 +206,14 @@ const NoteEditor = () => {
     const newContent = e.target.value;
     setContent(newContent); // Immediate local update for responsive typing
     
-    // Always trigger save for any change if we have edit permissions
+    
     if (effectiveCanEdit) {
       console.log('Triggering save for content change');
       debouncedSave(id, newContent, title);
     }
   };
 
-  // const handleSave = async () => {
-  //   try {
-  //     setIsSaving(true);
-  //     const data = await notesAPI.updateNote(id, { title, content });
-  //     dispatch(updateNote(data));
-  //     setLastSaved(new Date());
-  //     toast.success('Note saved successfully');
-  //   } catch (error) {
-  //     toast.error('Error saving note');
-  //   } finally {
-  //     setIsSaving(false);
-  //   }
-  // };
+ 
 
   const handleShare = async (e) => {
     e.preventDefault();
@@ -268,14 +267,11 @@ const NoteEditor = () => {
       return true;
     }
 
-    // STRATEGY 2: Check if current user is explicitly the owner
     if (currentNote.isOwnedByCurrentUser === true) {
       console.log('✅ Backend flag indicates user is owner');
       return true;
     }
 
-    // STRATEGY 3: Try multiple ID comparison approaches
-    // Check creator first
     if (currentNote.createdBy) {
       // Try direct comparison with both user.id and user._id
       if (
