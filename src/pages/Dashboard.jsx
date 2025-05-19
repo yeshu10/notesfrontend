@@ -155,18 +155,7 @@ const Dashboard = () => {
     navigate('/login');
   };
 
-  // const handleDeleteNote = async (noteId) => {
-  //   if (window.confirm('Are you sure you want to delete this note?')) {
-  //     try {
-  //       await notesAPI.deleteNote(noteId);
-  //       dispatch(removeNote(noteId));
-  //       toast.success('Note deleted successfully');
-  //     } catch (error) {
-  //       console.error('Delete note error:', error);
-  //       toast.error(error.message || 'Error deleting note');
-  //     }
-  //   }
-  // };
+  
 
   const handleDeleteNote = async (noteId) => {
     try {
@@ -211,7 +200,7 @@ const Dashboard = () => {
 
             <button
   onClick={() => setShowCreateModal(true)}
-  className="flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-400 hover:bg-indigo-700"
+  className="flex items-center gap-2 px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-400 hover:bg-indigo-700 cursor-pointer"
 >
   <LuNotebookPen className="text-lg" />
   Note
@@ -243,7 +232,7 @@ const Dashboard = () => {
              
                   setNoteToDelete(note._id);
           }}
-          className="ml-2 text-white hover:text-red-300 p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-white"
+          className="ml-2 text-white hover:text-red-300 p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-white cursor-pointer"
           title="Delete Note"
         >
           <FaTrash />
@@ -272,7 +261,7 @@ const Dashboard = () => {
             e.stopPropagation();
             navigate(`/notes/${note._id}?share=true`);
           }}
-          className="text-blue-600 hover:text-blue-800 p-1 rounded-full bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="text-blue-600 hover:text-blue-800 p-1 rounded-full bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
           title="Share Note"
         >
           <FaShare />
