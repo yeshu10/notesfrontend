@@ -1,31 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
-import { shareNote } from '../store/slices/notesSlice';
+import { updateNote } from '../store/slices/notesSlice';
+import { notesAPI } from '../services/api';
 import toast from 'react-hot-toast';
+import {
+    FaShareAlt,
+    FaUserPlus,
+    FaUserShield,
+    FaTimes,
+    FaTrash,
+    FaCheck,
+    FaEye,
+    FaEdit
+} from 'react-icons/fa';
 
 const ShareModal = ({ note, onClose }) => {
     const dispatch = useDispatch();
     const [email, setEmail] = useState('');
-    const [permission, setPermission] = useState('read');
+    const [permission, setPermission] = useState('write'); // 'write' (Editor) or 'read' (Viewer)
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [userSuggestions, setUserSuggestions] = useState([]);
+    const [isSearchingUsers, setIsSearchingUsers] = useState(false);
     const [errors, setErrors] = useState({});
 
-    // Validate email
-    const validateEmail = (email) => {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!email) return 'Email is required';
-        if (!emailRegex.test(email)) return 'Invalid email format';
-        return '';
-    };
+    // Auto-suggest user email search
+    useEffect(() => {
+        if (!email || email.trim().length < 2) {
+            setUserSuggestions([]);
+            return;
+        }
 
-    // Handle share
+        const timer = setTimeout(async () => {
+            setIsSearchingUsers(true);
+            try {
+                const res = await notesAPI.searchUsers(email);
+                setUserSuggestions(res.users || []);
+            } catch (err) {
+                setUserSuggestions([]);
+            } finally {
+                setIsSearchingUsers(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [email]);
+
     const handleShare = async (e) => {
         e.preventDefault();
-        
-        // Validate form
-        const emailError = validateEmail(email);
-        if (emailError) {
-            setErrors({ email: emailError });
+        if (!email || !email.includes('@')) {
+            setErrors({ email: 'Please enter a valid email address' });
             return;
         }
 
@@ -33,124 +56,218 @@ const ShareModal = ({ note, onClose }) => {
         setErrors({});
 
         try {
-            await dispatch(shareNote({
-                noteId: note._id,
-                email,
-                permission
-            })).unwrap();
-
-            toast.success(`Note shared with ${email}`);
-            onClose();
+            const updated = await notesAPI.shareNote(note._id, email.trim(), permission);
+            dispatch(updateNote(updated));
+            toast.success(`Access granted to ${email}`);
+            setEmail('');
+            setUserSuggestions([]);
         } catch (error) {
-            console.error('Share error:', error);
-            setErrors({
-                submit: error.message || 'Failed to share note'
-            });
-            toast.error(error.message || 'Failed to share note');
+            setErrors({ submit: error.message });
+            toast.error(error.message);
         } finally {
             setIsSubmitting(false);
         }
     };
 
+    const handleRemoveCollaborator = async (collabUserId) => {
+        if (!window.confirm('Remove access for this collaborator?')) return;
+        try {
+            const updated = await notesAPI.removeCollaborator(note._id, collabUserId);
+            dispatch(updateNote(updated));
+            toast.success('Collaborator removed');
+        } catch (error) {
+            toast.error(error.message || 'Failed to remove collaborator');
+        }
+    };
+
+    const handleUpdatePermission = async (collabEmail, newPermission) => {
+        try {
+            const updated = await notesAPI.shareNote(note._id, collabEmail, newPermission);
+            dispatch(updateNote(updated));
+            toast.success(`Permission updated to ${newPermission === 'write' ? 'Editor' : 'Viewer'}`);
+        } catch (error) {
+            toast.error(error.message || 'Failed to update permission');
+        }
+    };
+
+    const selectUserSuggestion = (u) => {
+        setEmail(u.email);
+        setUserSuggestions([]);
+    };
+
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                <h2 className="text-xl font-bold mb-4">Share Note</h2>
-                
-                <form onSubmit={handleShare} className="space-y-4">
-                    {/* Email Input */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Email Address
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl overflow-hidden animate-in fade-in duration-200">
+
+                {/* Header */}
+                <div className="flex items-center justify-between border-b pb-3 mb-4">
+                    <div className="flex items-center space-x-2 text-indigo-700 font-extrabold text-lg">
+                        <FaShareAlt className="text-pink-500" />
+                        <span>Share Note & Manage Roles</span>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition"
+                    >
+                        <FaTimes size={18} />
+                    </button>
+                </div>
+
+                {/* Note Title context */}
+                <div className="mb-4 p-3 bg-purple-50 rounded-xl border border-purple-100 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-purple-700 uppercase tracking-wider">
+                        Target Note
+                    </span>
+                    <span className="text-sm font-bold text-gray-800 truncate max-w-[200px]">
+                        "{note?.title || 'Untitled Note'}"
+                    </span>
+                </div>
+
+                {/* Share Form */}
+                <form onSubmit={handleShare} className="space-y-4 mb-6">
+                    <div className="relative">
+                        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                            Invite Registered User by Email
                         </label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => {
-                                setEmail(e.target.value);
-                                setErrors({});
-                            }}
-                            className={`w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 ${
-                                errors.email ? 'border-red-500' : 'border-gray-300'
-                            }`}
-                            placeholder="user@example.com"
-                            disabled={isSubmitting}
-                        />
-                        {errors.email && (
-                            <p className="mt-1 text-sm text-red-500">{errors.email}</p>
+                        <div className="flex space-x-2">
+                            <div className="relative flex-grow">
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="colleague@example.com"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                />
+
+                                {/* Autocomplete Dropdown */}
+                                {userSuggestions.length > 0 && (
+                                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-20 max-h-40 overflow-y-auto">
+                                        {userSuggestions.map((u) => (
+                                            <div
+                                                key={u._id}
+                                                onClick={() => selectUserSuggestion(u)}
+                                                className="p-2.5 hover:bg-indigo-50 cursor-pointer flex items-center justify-between border-b last:border-0"
+                                            >
+                                                <div>
+                                                    <p className="text-xs font-bold text-gray-800">{u.name}</p>
+                                                    <p className="text-[11px] text-gray-500">{u.email}</p>
+                                                </div>
+                                                <FaUserPlus className="text-indigo-500" size={12} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Permission Level Selector */}
+                            <select
+                                value={permission}
+                                onChange={(e) => setPermission(e.target.value)}
+                                className="px-3 py-2 border border-gray-300 rounded-xl text-xs font-semibold text-gray-800 focus:ring-2 focus:ring-indigo-500 bg-gray-50"
+                            >
+                                <option value="write">Editor (Can edit)</option>
+                                <option value="read">Viewer (Can read)</option>
+                            </select>
+                        </div>
+                        {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-full py-2.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-white font-bold rounded-xl text-sm hover:brightness-110 shadow transition flex items-center justify-center space-x-2 disabled:opacity-50"
+                    >
+                        <FaUserPlus />
+                        <span>{isSubmitting ? 'Granting Access...' : 'Send Access Invite'}</span>
+                    </button>
+                </form>
+
+                {/* Current Roles List */}
+                <div>
+                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                        People with Access
+                    </h3>
+                    <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                        {/* Owner badge */}
+                        <div className="flex items-center justify-between p-3 bg-indigo-50/80 rounded-xl border border-indigo-100">
+                            <div className="flex items-center space-x-2">
+                                <div className="w-8 h-8 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow">
+                                    {note?.createdBy?.name ? note.createdBy.name.charAt(0).toUpperCase() : 'O'}
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-gray-900">{note?.createdBy?.name} (Owner)</p>
+                                    <p className="text-[10px] text-gray-500">{note?.createdBy?.email}</p>
+                                </div>
+                            </div>
+                            <span className="px-2.5 py-1 bg-indigo-200 text-indigo-900 rounded-full text-[10px] font-extrabold uppercase">
+                                Owner
+                            </span>
+                        </div>
+
+                        {/* Collaborator badges */}
+                        {note?.collaborators?.length === 0 ? (
+                            <p className="text-xs text-gray-400 italic text-center py-3 bg-gray-50 rounded-xl">
+                                No external collaborators added yet.
+                            </p>
+                        ) : (
+                            note?.collaborators?.map((collab) => {
+                                const isWrite = collab.permission === 'write' || collab.permission === 'editor';
+                                const collabUser = collab.userId || {};
+                                return (
+                                    <div
+                                        key={collabUser._id || Math.random()}
+                                        className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100/70 transition"
+                                    >
+                                        <div className="flex items-center space-x-2">
+                                            <div className="w-8 h-8 rounded-full bg-purple-500 text-white font-bold text-xs flex items-center justify-center shadow">
+                                                {collabUser.name ? collabUser.name.charAt(0).toUpperCase() : 'C'}
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-bold text-gray-800">{collabUser.name || 'Collaborator'}</p>
+                                                <p className="text-[10px] text-gray-500">{collabUser.email}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center space-x-2">
+                                            {/* Permission toggle */}
+                                            <select
+                                                value={isWrite ? 'write' : 'read'}
+                                                onChange={(e) => handleUpdatePermission(collabUser.email, e.target.value)}
+                                                className="px-2 py-1 border border-gray-300 rounded-lg text-[11px] font-bold bg-white text-gray-700"
+                                            >
+                                                <option value="write">Editor</option>
+                                                <option value="read">Viewer</option>
+                                            </select>
+
+                                            {/* Remove button */}
+                                            <button
+                                                onClick={() => handleRemoveCollaborator(collabUser._id)}
+                                                className="text-gray-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition"
+                                                title="Remove Access"
+                                            >
+                                                <FaTrash size={12} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })
                         )}
                     </div>
+                </div>
 
-                    {/* Permission Select */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Permission Level
-                        </label>
-                        <select
-                            value={permission}
-                            onChange={(e) => setPermission(e.target.value)}
-                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                            disabled={isSubmitting}
-                        >
-                            <option value="read">Read Only</option>
-                            <option value="write">Can Edit</option>
-                        </select>
-                    </div>
+                {/* Footer */}
+                <div className="mt-6 pt-3 border-t flex justify-end">
+                    <button
+                        onClick={onClose}
+                        className="px-5 py-2 text-xs font-bold bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition"
+                    >
+                        Close
+                    </button>
+                </div>
 
-                    {/* Current Collaborators */}
-                    {note.collaborators.length > 0 && (
-                        <div>
-                            <h3 className="text-sm font-medium text-gray-700 mb-2">
-                                Current Collaborators
-                            </h3>
-                            <div className="space-y-2">
-                                {note.collaborators.map((collab) => (
-                                    <div
-                                        key={collab.userId._id}
-                                        className="flex items-center justify-between p-2 bg-gray-50 rounded-md"
-                                    >
-                                        <span>{collab.userId.email}</span>
-                                        <span className={`text-sm ${
-                                            collab.permission === 'write'
-                                                ? 'text-green-600'
-                                                : 'text-blue-600'
-                                        }`}>
-                                            {collab.permission}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Error Message */}
-                    {errors.submit && (
-                        <p className="text-sm text-red-500">{errors.submit}</p>
-                    )}
-
-                    {/* Buttons */}
-                    <div className="flex justify-end space-x-3">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
-                            disabled={isSubmitting}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className={`px-4 py-2 text-sm text-white bg-blue-500 rounded-md hover:bg-blue-600 
-                                ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting ? 'Sharing...' : 'Share'}
-                        </button>
-                    </div>
-                </form>
             </div>
         </div>
     );
 };
 
-export default ShareModal; 
+export default ShareModal;

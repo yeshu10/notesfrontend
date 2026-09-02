@@ -1,544 +1,574 @@
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  setCurrentNote,
+  updateNote,
+  setActiveRoomUsers
+} from '../store/slices/notesSlice';
 import { notesAPI } from '../services/api';
-import { setCurrentNote, updateNote } from '../store/slices/notesSlice';
-import { joinNoteRoom, leaveNoteRoom, updateNoteInRealTime } from '../services/socket';
+import {
+  joinNoteRoom,
+  leaveNoteRoom,
+  updateNoteInRealTime
+} from '../services/socket';
+import ShareModal from '../components/ShareModal';
 import toast from 'react-hot-toast';
-import { AiOutlineArrowLeft } from 'react-icons/ai';
 import debounce from 'lodash/debounce';
+import {
+  FaArrowLeft,
+  FaShareAlt,
+  FaThumbtack,
+  FaTag,
+  FaPlus,
+  FaTimes,
+  FaBold,
+  FaItalic,
+  FaHeading,
+  FaQuoteLeft,
+  FaListUl,
+  FaListOl,
+  FaCode,
+  FaEye,
+  FaEdit,
+  FaColumns,
+  FaCheck,
+  FaSync,
+  FaLock,
+  FaSave
+} from 'react-icons/fa';
 
 const NoteEditor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const dispatch = useDispatch();
-  const { currentNote } = useSelector((state) => state.notes);
+
   const { user } = useSelector((state) => state.auth);
+  const { currentNote, activeRoomUsers, tags } = useSelector((state) => state.notes);
+
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [shareEmail, setShareEmail] = useState('');
-  const [sharePermission, setSharePermission] = useState('read');
-  const [loading, setLoading] = useState(true);
+  const [noteTags, setNoteTags] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSharing, setIsSharing] = useState(false);
-  const [lastSaved, setLastSaved] = useState(new Date());
-  const [forceEditMode, setForceEditMode] = useState(false);
-  const [activeUsers, setActiveUsers] = useState([]);
-  const isFirstLoad = useRef(true);
-  const autoSaveTimerRef = useRef(null);
+  const [lastSavedTime, setLastSavedTime] = useState(null);
+  const [viewMode, setViewMode] = useState('edit'); // 'edit', 'split', 'preview'
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [newTagInput, setNewTagInput] = useState('');
+  const [showTagDropdown, setShowTagDropdown] = useState(false);
 
-  // More reliable user ID comparison function
-  const compareIds = useCallback((id1, id2) => {
-    if (!id1 || !id2) return false;
-    
-    // Handle cases where the ID might be an object or already a string
-    const str1 = typeof id1 === 'object' ? 
-      (id1.toString ? id1.toString() : JSON.stringify(id1)) : 
-      String(id1);
-    
-    const str2 = typeof id2 === 'object' ? 
-      (id2.toString ? id2.toString() : JSON.stringify(id2)) : 
-      String(id2);
-    
-    // Strip any quotes that might be present in string representations
-    const clean1 = str1.replace(/^"(.+)"$/, '$1');
-    const clean2 = str2.replace(/^"(.+)"$/, '$1');
-    
-    console.log(`Comparing IDs: "${clean1}" vs "${clean2}" => ${clean1 === clean2}`);
-    return clean1 === clean2;
-  }, []);
+  const textareaRef = useRef(null);
+  const isMountedRef = useRef(true);
 
-  
-  const debouncedSave = useCallback(
-    debounce(async (noteId, newContent, newTitle) => {
+  const isLoadedRef = useRef(false);
+
+  // Load note details
+  useEffect(() => {
+    isMountedRef.current = true;
+    isLoadedRef.current = false;
+    const fetchNote = async () => {
       try {
-        if (!noteId) {
-          console.error('Missing note ID for save');
-          return;
+        const data = await notesAPI.getNote(id);
+        if (isMountedRef.current) {
+          dispatch(setCurrentNote(data));
+          setTitle(data.title || '');
+          setContent(data.content || '');
+          setNoteTags(data.tags || []);
+          joinNoteRoom(id);
+          // Mark loaded after state is populated
+          setTimeout(() => {
+            isLoadedRef.current = true;
+          }, 100);
         }
-        
-        setIsSaving(true);
-        console.log('Auto-saving note:', { noteId, newTitle });
-        
-       
-        updateNoteInRealTime(noteId, newContent, newTitle);
-        
-       
-        await new Promise(resolve => setTimeout(resolve, 100)); // Small delay to prevent race conditions
-        const data = await notesAPI.updateNote(noteId, { 
-          title: newTitle, 
-          content: newContent 
-        });
-        
-        // Update local state
-        dispatch(updateNote({
-          ...data,
-          content: newContent, 
-          title: newTitle 
-        }));
-        setLastSaved(new Date());
-        console.log('Auto-save completed successfully');
       } catch (error) {
-        console.error('Error auto-saving note:', error);
-        // Only show toast if it's not a canceled request
-        if (!error.message.includes('canceled')) {
-          toast.error('Changes will be saved when connection is restored');
-          
-          // Schedule a retry
-          if (autoSaveTimerRef.current) {
-            clearTimeout(autoSaveTimerRef.current);
-          }
-          
-          autoSaveTimerRef.current = setTimeout(() => {
-            console.log('Retrying auto-save...');
-            debouncedSave(noteId, newContent, newTitle);
-          }, 5000);
-        }
+        toast.error(error.message || 'Failed to load note');
+        navigate('/');
+      }
+    };
+
+    fetchNote();
+
+    return () => {
+      isMountedRef.current = false;
+      leaveNoteRoom(id);
+    };
+  }, [id, dispatch, navigate]);
+
+  // Determine user permission
+  const isOwner = currentNote?.isOwnedByCurrentUser || (currentNote?.createdBy && (currentNote.createdBy._id === user?.id || currentNote.createdBy._id === user?._id));
+  const userPermission = currentNote?.userPermission || (isOwner ? 'owner' : 'editor');
+  const canEdit = isOwner || userPermission === 'editor' || userPermission === 'write';
+
+  // Immediate save helper for explicit save / navigation
+  const saveNoteNow = async (updatedTitle, updatedContent, updatedTags) => {
+    if (!canEdit || !id) return;
+    setIsSaving(true);
+    try {
+      const result = await notesAPI.updateNote(id, {
+        title: (updatedTitle !== undefined ? updatedTitle : title).trim() || 'Untitled Note',
+        content: updatedContent !== undefined ? updatedContent : content,
+        tags: updatedTags !== undefined ? updatedTags : noteTags
+      });
+      dispatch(updateNote(result));
+      setLastSavedTime(new Date());
+      return result;
+    } catch (error) {
+      console.error('Save note error:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Debounced auto-save via useEffect
+  useEffect(() => {
+    if (!isLoadedRef.current || !canEdit || !id) return;
+
+    setIsSaving(true);
+    const timer = setTimeout(async () => {
+      try {
+        const result = await notesAPI.updateNote(id, {
+          title: title.trim() || 'Untitled Note',
+          content,
+          tags: noteTags
+        });
+        dispatch(updateNote(result));
+        setLastSavedTime(new Date());
+      } catch (error) {
+        console.error('Auto-save error:', error);
       } finally {
         setIsSaving(false);
       }
-    }, 300), // Reduced from 500ms to 300ms for better responsiveness
-    []
-  );
+    }, 800);
 
-  // Clean up auto-save timer
+    return () => clearTimeout(timer);
+  }, [title, content, noteTags, id, canEdit, dispatch]);
+
+  // Save on navigation back
+  const handleBack = async () => {
+    if (canEdit && id) {
+      await saveNoteNow();
+    }
+    navigate('/');
+  };
+
+  // Keyboard shortcut Ctrl+S / Cmd+S for saving
   useEffect(() => {
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    console.log('NoteEditor mounting, fetching note with ID:', id);
-    fetchNote();
-    joinNoteRoom(id);
-    
-    // Check if share parameter is present in URL
-    const searchParams = new URLSearchParams(location.search);
-    if (searchParams.get('share') === 'true') {
-      setShowShareModal(true);
-    }
-    
-    return () => {
-      console.log('NoteEditor unmounting, leaving note room:', id);
-      leaveNoteRoom(id);
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
-    };
-  }, [id, location.search]);
-
-  // Sync note data to local state
-  useEffect(() => {
-    if (currentNote) {
-      console.log('Current note updated in Redux:', currentNote._id);
-      
-      // Always reset state when note ID changes
-      if (id !== currentNote._id) {
-        setTitle(currentNote.title || '');
-        setContent(currentNote.content || '');
-        setLoading(false);
-        isFirstLoad.current = false;
-        console.log('Note ID changed - resetting state');
-        return;
-      }
-      
-      // Handle updates for the current note
-      if (isFirstLoad.current) {
-        // First load - always update local state
-        setTitle(currentNote.title || '');
-        setContent(currentNote.content || '');
-        setLoading(false);
-        isFirstLoad.current = false;
-        console.log('Initial note data loaded');
-      } else if (currentNote.lastUpdated && 
-                 lastSaved.getTime() < new Date(currentNote.lastUpdated).getTime()) {
-        // This is an update from someone else - apply it to our local state
-        console.log('Remote update detected - applying changes');
-        setTitle(currentNote.title || '');
-        setContent(currentNote.content || '');
-      }
-    }
-  }, [currentNote, lastSaved, id]);
-
-  const fetchNote = async () => {
-    try {
-      console.log('Fetching note with ID:', id);
-      const data = await notesAPI.getNote(id);
-      console.log('Received note data:', data);
-      
-      // Log important values for debugging
-      if (data && user) {
-        console.log('Permission check IDs:', {
-          noteId: id,
-          creatorId: data.createdBy?._id,
-          userId: user.id, 
-          userIdType: typeof user.id,
-          user_Id: user._id,
-          user_IdType: typeof user._id
-        });
-      }
-      
-      dispatch(setCurrentNote(data));
-    } catch (error) {
-      console.error('Error fetching note:', error);
-      toast.error('Error fetching note');
-      navigate('/');
-    }
-  };
-
-  const handleTitleChange = (e) => {
-    const newTitle = e.target.value;
-    setTitle(newTitle); // Immediate local update for responsive typing
-    
-    
-    if (effectiveCanEdit) {
-      console.log('Triggering save for title change');
-      debouncedSave(id, content, newTitle);
-    }
-  };
-
-  const handleContentChange = (e) => {
-    const newContent = e.target.value;
-    setContent(newContent); // Immediate local update for responsive typing
-    
-    
-    if (effectiveCanEdit) {
-      console.log('Triggering save for content change');
-      debouncedSave(id, newContent, title);
-    }
-  };
-
- 
-
-  const handleShare = async (e) => {
-    e.preventDefault();
-    
-    // Validate that the note has content before sharing
-    if (!title.trim()) {
-      toast.error('Cannot share a note without a title');
-      return;
-    }
-    
-    if (!shareEmail.trim()) {
-      toast.error('Please enter an email address to share with');
-      return;
-    }
-    
-    setIsSharing(true);
-    try {
-      const data = await notesAPI.shareNote(id, shareEmail, sharePermission);
-      dispatch(updateNote(data));
-      setShowShareModal(false);
-      setShareEmail('');
-      toast.success(`Note shared with ${shareEmail}`);
-    } catch (error) {
-      toast.error(error.message || 'Error sharing note');
-    } finally {
-      setIsSharing(false);
-    }
-  };
-
-  // IMPROVED permission checking with multiple strategies
-  const canEdit = useMemo(() => {
-    if (!currentNote || !user) {
-      console.log('Cannot check edit permissions - note or user missing');
-      return false;
-    }
-
-    console.log('Checking permissions with user data:', {
-      userId: user.id || user._id,
-      userIdType: typeof (user.id || user._id),
-      noteCreator: currentNote.createdBy?._id,
-      creatorType: typeof currentNote.createdBy?._id,
-      collaborators: currentNote.collaborators?.map(c => ({
-        id: c.userId?._id,
-        permission: c.permission
-      }))
-    });
-
-    // STRATEGY 1: Backend directly tells us we have permission (most reliable)
-    if (currentNote.userPermission && currentNote.userPermission === 'write') {
-      console.log('✅ Backend explicitly granted write permission');
-      return true;
-    }
-
-    if (currentNote.isOwnedByCurrentUser === true) {
-      console.log('✅ Backend flag indicates user is owner');
-      return true;
-    }
-
-    if (currentNote.createdBy) {
-      // Try direct comparison with both user.id and user._id
-      if (
-        compareIds(user.id, currentNote.createdBy._id) || 
-        compareIds(user._id, currentNote.createdBy._id) ||
-        compareIds(user.id, currentNote.createdBy.id) || 
-        compareIds(user._id, currentNote.createdBy.id)
-      ) {
-        console.log('✅ User is the creator - granting edit permission');
-        return true;
-      }
-      
-      // Try string-based comparison as fallback
-      if (
-        String(user.id) === String(currentNote.createdBy._id) ||
-        String(user._id) === String(currentNote.createdBy._id) ||
-        (typeof currentNote.createdBy === 'object' && currentNote.createdBy.id && 
-         (String(user.id) === String(currentNote.createdBy.id) ||
-          String(user._id) === String(currentNote.createdBy.id)))
-      ) {
-        console.log('✅ User is the creator (string comparison) - granting edit permission');
-        return true;
-      }
-    }
-    
-    // STRATEGY 4: Check collaborator permissions
-    if (currentNote.collaborators && currentNote.collaborators.length > 0) {
-      // Try both object comparison and string comparison
-      const hasWriteAccess = currentNote.collaborators.some(collab => {
-        if (!collab.userId || collab.permission !== 'write') return false;
-        
-        // Try various ID formats and comparison methods
-        const isMatch = 
-          compareIds(user.id, collab.userId._id) || 
-          compareIds(user._id, collab.userId._id) ||
-          compareIds(user.id, collab.userId.id) || 
-          compareIds(user._id, collab.userId.id) ||
-          String(user.id) === String(collab.userId._id) ||
-          String(user._id) === String(collab.userId._id) ||
-          (collab.userId.id && (
-            String(user.id) === String(collab.userId.id) ||
-            String(user._id) === String(collab.userId.id)
-          ));
-        
-        if (isMatch && collab.permission === 'write') {
-          console.log(`✅ Found matching collaborator with ${collab.permission} permission`);
-          return true;
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (canEdit && id) {
+          saveNoteNow();
+          toast.success('Note saved!');
         }
-        
-        return false;
-      });
-      
-      if (hasWriteAccess) {
-        console.log('✅ User is a collaborator with write permission');
-        return true;
       }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [id, canEdit, title, content, noteTags]);
+
+  // Handle title change
+  const handleTitleChange = (e) => {
+    const val = e.target.value;
+    setTitle(val);
+    if (canEdit && id) {
+      updateNoteInRealTime(id, content, val);
     }
-    
-    // If we got here, the user doesn't have edit permission
-    console.log('❌ No edit permission found after all checks');
-    return false;
-  }, [currentNote, user, compareIds]);
+  };
 
-  // Function to check if user is the creator of the note
-  const isCreatorOfNote = useMemo(() => {
-    if (!currentNote || !user || !currentNote.createdBy) return false;
-    
-    return compareIds(user.id, currentNote.createdBy._id) || 
-           compareIds(user._id, currentNote.createdBy._id);
-  }, [currentNote, user, compareIds]);
-
-  // Determine effective edit permission (either automatic or forced)
-  const effectiveCanEdit = canEdit || (isCreatorOfNote && forceEditMode);
-
-  // Debug logging with more details
-  console.log('Permission check:', {
-    userId: user?.id,
-    creatorId: currentNote?.createdBy?._id,
-    isCreator: isCreatorOfNote,
-    regularCanEdit: canEdit,
-    forceEditMode,
-    effectiveCanEdit
-  });
-
-  // Reload note if we detect a permissions issue for the creator
-  useEffect(() => {
-    if (isCreatorOfNote && !canEdit && !loading) {
-      console.log('Detected permission issue for creator - reloading note');
-      fetchNote();
+  // Handle content change
+  const handleContentChange = (e) => {
+    const val = e.target.value;
+    setContent(val);
+    if (canEdit && id) {
+      updateNoteInRealTime(id, val, title);
     }
-  }, [isCreatorOfNote, canEdit, loading]);
+  };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mx-auto"></div>
-          <p className="mt-4">Loading note...</p>
-        </div>
-      </div>
-    );
-  }
+  // Tag addition
+  const handleAddTagToNote = (tagToAdd) => {
+    const trimmed = tagToAdd.trim();
+    if (!trimmed || noteTags.includes(trimmed)) return;
+    const updated = [...noteTags, trimmed];
+    setNoteTags(updated);
+    setNewTagInput('');
+    setShowTagDropdown(false);
+  };
+
+  const handleRemoveTagFromNote = (tagToRemove) => {
+    const updated = noteTags.filter(t => t !== tagToRemove);
+    setNoteTags(updated);
+  };
+
+  // Toggle Pin
+  const handleTogglePin = async () => {
+    if (!currentNote) return;
+    try {
+      const res = await notesAPI.updateNote(currentNote._id, { isPinned: !currentNote.isPinned });
+      dispatch(updateNote(res));
+      toast.success(res.isPinned ? 'Note pinned' : 'Note unpinned');
+    } catch (error) {
+      toast.error('Failed to update pin');
+    }
+  };
+
+  // Markdown Formatting Helpers
+  const insertFormatting = (prefix, suffix = '') => {
+    if (!textareaRef.current || !canEdit) return;
+    const el = textareaRef.current;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const text = el.value;
+    const selectedText = text.substring(start, end);
+    const replacement = `${prefix}${selectedText}${suffix}`;
+
+    const newContent = text.substring(0, start) + replacement + text.substring(end);
+    setContent(newContent);
+    noteDataRef.current.content = newContent;
+
+    if (id) {
+      updateNoteInRealTime(id, newContent, title);
+      debouncedSaveRef.current(id);
+    }
+
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(start + prefix.length, end + prefix.length);
+    }, 10);
+  };
+
+  // Word count & Char count
+  const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
+  const charCount = content.length;
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => navigate('/')}
-                className="text-gray-700 hover:text-gray-900"
-              >
-               <AiOutlineArrowLeft className="text-xl" />
-              </button>
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+
+      {/* Top Header Bar */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+
+          {/* Left section: Back button & Title */}
+          <div className="flex items-center space-x-3 flex-1 min-w-0">
+            <button
+              onClick={handleBack}
+              className="p-2 text-gray-500 hover:text-purple-700 hover:bg-purple-50 rounded-xl transition"
+              title="Back to Dashboard"
+            >
+              <FaArrowLeft size={16} />
+            </button>
+
+            <div className="flex-1 min-w-0">
               <input
                 type="text"
                 value={title}
                 onChange={handleTitleChange}
-                disabled={!effectiveCanEdit}
-                className="text-xl font-bold text-gray-900 border-none focus:outline-none focus:ring-0"
-                placeholder="Note title"
+                disabled={!canEdit}
+                placeholder="Untitled Note..."
+                className="w-full text-lg sm:text-xl font-black text-gray-900 bg-transparent border-b border-transparent focus:border-purple-500 focus:outline-none transition py-0.5 truncate"
               />
             </div>
-            <div className="flex items-center space-x-4">
+          </div>
+
+          {/* Right section: Presence, Status, Share & Actions */}
+          <div className="flex items-center space-x-2 sm:space-x-3">
+
+            {/* Real-time Room Active Presence Avatars */}
+            {activeRoomUsers.length > 0 && (
+              <div className="hidden sm:flex items-center -space-x-2 mr-2" title="Collaborators currently viewing this note">
+                {activeRoomUsers.map((u) => (
+                  <div
+                    key={u.userId || u.socketId}
+                    className="w-7 h-7 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white shadow-sm"
+                    title={`${u.name} (Active in room)`}
+                  >
+                    {u.name ? u.name.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Save status pill */}
+            <div className="hidden md:flex items-center space-x-1.5 text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full font-medium">
               {isSaving ? (
-                <span className="text-sm text-gray-500">Auto-saving...</span>
+                <>
+                  <FaSync className="animate-spin text-purple-600" size={10} />
+                  <span>Saving...</span>
+                </>
+              ) : !canEdit ? (
+                <>
+                  <FaLock className="text-amber-500" size={10} />
+                  <span>Read Only</span>
+                </>
               ) : (
-                <span className="text-sm text-gray-500">Last saved: {lastSaved.toLocaleTimeString()}</span>
-              )}
-              {/* {effectiveCanEdit && (
-                <button
-                  onClick={handleSave}
-                  className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                >
-                  Save
-                </button>
-              )} */}
-              {isCreatorOfNote && (
-                <button
-                  onClick={() => setShowShareModal(true)}
-                  className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
-                >
-                  Share
-                </button>
+                <>
+                  <FaCheck className="text-green-500" size={10} />
+                  <span>Saved</span>
+                </>
               )}
             </div>
+
+            {/* Role Badge */}
+            <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${isOwner
+              ? 'bg-indigo-100 text-indigo-900 border border-indigo-200'
+              : canEdit
+                ? 'bg-purple-100 text-purple-900 border border-purple-200'
+                : 'bg-amber-100 text-amber-900 border border-amber-200'
+              }`}>
+              {isOwner ? 'Owner' : canEdit ? 'Editor' : 'Viewer'}
+            </span>
+
+            {/* Pin Toggle */}
+            <button
+              onClick={handleTogglePin}
+              className={`p-2 rounded-xl transition ${currentNote?.isPinned ? 'bg-purple-100 text-purple-700' : 'text-gray-400 hover:bg-gray-100'
+                }`}
+              title={currentNote?.isPinned ? 'Unpin note' : 'Pin note'}
+            >
+              <FaThumbtack size={14} />
+            </button>
+
+            {/* Manual Save Button */}
+            {canEdit && (
+              <button
+                onClick={async () => {
+                  await saveNoteNow();
+                  toast.success('Note saved!');
+                }}
+                disabled={isSaving}
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow transition flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                title="Save changes (Ctrl+S)"
+              >
+                <FaSave size={12} />
+                <span className="hidden sm:inline">Save</span>
+              </button>
+            )}
+
+            {/* Share Button (Only if owner) */}
+            {isOwner && (
+              <button
+                onClick={() => setIsShareModalOpen(true)}
+                className="px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-xl text-xs hover:brightness-110 shadow transition flex items-center space-x-1.5"
+              >
+                <FaShareAlt size={12} />
+                <span className="hidden sm:inline">Share</span>
+              </button>
+            )}
+
           </div>
+        </div>
+      </header>
+
+      {/* Tags & Controls Toolbar */}
+      <div className="bg-white border-b border-gray-100 py-2.5 px-4">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+
+          {/* Note Tags List & Add Dropdown */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center space-x-1">
+              <FaTag size={10} />
+              <span>Tags:</span>
+            </span>
+
+            {noteTags.map((tag) => (
+              <span
+                key={tag}
+                className="px-2.5 py-0.5 bg-purple-50 text-purple-700 text-xs font-semibold rounded-lg border border-purple-200 flex items-center space-x-1"
+              >
+                <span>{tag}</span>
+                {canEdit && (
+                  <button
+                    onClick={() => handleRemoveTagFromNote(tag)}
+                    className="hover:text-red-500 p-0.5"
+                  >
+                    <FaTimes size={10} />
+                  </button>
+                )}
+              </span>
+            ))}
+
+            {/* Add Tag Dropdown Input */}
+            {canEdit && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowTagDropdown(!showTagDropdown)}
+                  className="px-2.5 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-semibold rounded-lg transition flex items-center space-x-1"
+                >
+                  <FaPlus size={9} />
+                  <span>Tag</span>
+                </button>
+
+                {showTagDropdown && (
+                  <div className="absolute left-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-20 p-2">
+                    <input
+                      type="text"
+                      value={newTagInput}
+                      onChange={(e) => setNewTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddTagToNote(newTagInput);
+                        }
+                      }}
+                      placeholder="Type tag name..."
+                      className="w-full px-2 py-1 text-xs border rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-500 mb-2"
+                      autoFocus
+                    />
+
+                    {tags && tags.length > 0 && (
+                      <div className="max-h-32 overflow-y-auto space-y-1 border-t pt-1">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase">Existing Tags</p>
+                        {tags.map((t) => (
+                          <div
+                            key={t}
+                            onClick={() => handleAddTagToNote(t)}
+                            className="px-2 py-1 text-xs hover:bg-purple-50 rounded cursor-pointer text-gray-700 font-medium"
+                          >
+                            #{t}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Formatting & View Mode Controls */}
+          <div className="flex items-center space-x-3">
+            {/* Formatting shortcuts */}
+            {canEdit && (
+              <div className="hidden sm:flex items-center space-x-1 bg-gray-100 p-1 rounded-xl">
+                <button
+                  onClick={() => insertFormatting('**', '**')}
+                  className="p-1.5 hover:bg-white text-gray-700 rounded-lg text-xs transition"
+                  title="Bold"
+                >
+                  <FaBold size={11} />
+                </button>
+                <button
+                  onClick={() => insertFormatting('*', '*')}
+                  className="p-1.5 hover:bg-white text-gray-700 rounded-lg text-xs transition"
+                  title="Italic"
+                >
+                  <FaItalic size={11} />
+                </button>
+                <button
+                  onClick={() => insertFormatting('# ')}
+                  className="p-1.5 hover:bg-white text-gray-700 rounded-lg text-xs transition"
+                  title="Heading 1"
+                >
+                  <FaHeading size={11} />
+                </button>
+                <button
+                  onClick={() => insertFormatting('> ')}
+                  className="p-1.5 hover:bg-white text-gray-700 rounded-lg text-xs transition"
+                  title="Quote"
+                >
+                  <FaQuoteLeft size={11} />
+                </button>
+                <button
+                  onClick={() => insertFormatting('- ')}
+                  className="p-1.5 hover:bg-white text-gray-700 rounded-lg text-xs transition"
+                  title="Bullet List"
+                >
+                  <FaListUl size={11} />
+                </button>
+                <button
+                  onClick={() => insertFormatting('```\n', '\n```')}
+                  className="p-1.5 hover:bg-white text-gray-700 rounded-lg text-xs transition"
+                  title="Code Block"
+                >
+                  <FaCode size={11} />
+                </button>
+              </div>
+            )}
+
+            {/* View Mode selector */}
+            <div className="flex items-center bg-gray-100 p-1 rounded-xl text-xs font-bold text-gray-600">
+              <button
+                onClick={() => setViewMode('edit')}
+                className={`px-3 py-1 rounded-lg transition ${viewMode === 'edit' ? 'bg-white text-purple-700 shadow-sm' : 'hover:text-gray-900'
+                  }`}
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => setViewMode('split')}
+                className={`px-3 py-1 rounded-lg transition hidden md:block ${viewMode === 'split' ? 'bg-white text-purple-700 shadow-sm' : 'hover:text-gray-900'
+                  }`}
+              >
+                Split
+              </button>
+              <button
+                onClick={() => setViewMode('preview')}
+                className={`px-3 py-1 rounded-lg transition ${viewMode === 'preview' ? 'bg-white text-purple-700 shadow-sm' : 'hover:text-gray-900'
+                  }`}
+              >
+                Preview
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          {/* Permission issue warning for creator */}
-          {!canEdit && isCreatorOfNote && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-300 rounded-md text-red-700">
-              <p className="font-bold">Permission Issue Detected:</p>
-              <p>You should have edit permissions as the note creator but the system is not recognizing your ownership.</p>
-              <div className="flex mt-4 space-x-3">
-                <button 
-                  onClick={() => setForceEditMode(true)}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded"
-                >
-                  Override and Enable Editing
-                </button>
-                <button 
-                  onClick={fetchNote}
-                  className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-800 rounded"
-                >
-                  Reload Note Data
-                </button>
-              </div>
-              <pre className="mt-3 p-2 bg-gray-100 rounded text-xs overflow-auto">
-                User ID: {user?.id || user?._id}
-                <br />
-                Note Creator ID: {currentNote?.createdBy?._id}
-              </pre>
-            </div>
-          )}
-          
-          {/* Read-only mode notification */}
-          {!effectiveCanEdit && (
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-700">
-              <p>You are in read-only mode. {isCreatorOfNote ? 'You are the owner of this note but editing is currently disabled.' : 'You do not have edit permissions for this note.'}</p>
+      {/* Main Canvas Area */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col">
+        <div className="flex-1 bg-white rounded-3xl shadow-lg border border-gray-200 overflow-hidden flex flex-col md:flex-row min-h-[500px]">
+
+          {/* Editor Area */}
+          {(viewMode === 'edit' || viewMode === 'split') && (
+            <div className={`p-6 flex flex-col flex-1 ${viewMode === 'split' ? 'border-r border-gray-200' : ''}`}>
+              <textarea
+                ref={textareaRef}
+                value={content}
+                onChange={handleContentChange}
+                disabled={!canEdit}
+                placeholder={canEdit ? 'Write your note content here using Markdown formatting...' : 'Read-only note content...'}
+                className="w-full flex-1 bg-transparent resize-none focus:outline-none text-gray-800 text-base sm:text-lg leading-relaxed font-sans"
+              />
             </div>
           )}
 
-          {/* Auto-save status notification */}
-          {effectiveCanEdit && (
-            <div className="mb-4 p-2 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">
-              <p>Auto-save is enabled. Changes will be saved automatically.</p>
+          {/* Markdown Preview Area */}
+          {(viewMode === 'preview' || viewMode === 'split') && (
+            <div className="p-6 flex-1 bg-slate-50/50 overflow-y-auto prose max-w-none">
+              <h2 className="text-xl font-bold text-gray-900 mb-4 pb-2 border-b">
+                {title || 'Untitled Note'}
+              </h2>
+              {content ? (
+                <div className="whitespace-pre-wrap text-gray-800 leading-relaxed font-sans">
+                  {content}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400 italic">No content to preview.</p>
+              )}
             </div>
           )}
-          
-          <textarea
-            value={content}
-            onChange={handleContentChange}
-            disabled={!effectiveCanEdit}
-            className={`w-full h-[calc(100vh-12rem)] p-4 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 ${!effectiveCanEdit ? 'bg-gray-50 cursor-not-allowed' : 'bg-white cursor-text'}`}
-            placeholder={effectiveCanEdit ? "Start writing..." : "You don't have permission to edit this note"}
-            style={{cursor: effectiveCanEdit ? 'text' : 'not-allowed'}}
-          />
+
+        </div>
+
+        {/* Footer Statistics */}
+        <div className="mt-4 flex items-center justify-between text-xs text-gray-400 px-2 font-medium">
+          <div className="flex items-center space-x-4">
+            <span>{wordCount} words</span>
+            <span>{charCount} characters</span>
+          </div>
+          {lastSavedTime && (
+            <span>Last saved at {lastSavedTime.toLocaleTimeString()}</span>
+          )}
         </div>
       </main>
 
       {/* Share Modal */}
-      {showShareModal && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Share Note</h3>
-            <form onSubmit={handleShare}>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                    Email address
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    value={shareEmail}
-                    onChange={(e) => setShareEmail(e.target.value)}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    required
-                    placeholder="Enter email of registered user"
-                    disabled={isSharing}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">User must be registered in the system</p>
-                </div>
-                <div>
-                  <label htmlFor="permission" className="block text-sm font-medium text-gray-700">
-                    Permission
-                  </label>
-                  <select
-                    id="permission"
-                    value={sharePermission}
-                    onChange={(e) => setSharePermission(e.target.value)}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    disabled={isSharing}
-                  >
-                    <option value="read">Read only</option>
-                    <option value="write">Can edit</option>
-                  </select>
-                </div>
-              </div>
-              <div className="mt-4 flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setShowShareModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
-                  disabled={isSharing}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={isSharing}
-                >
-                  {isSharing ? 'Sharing...' : 'Share'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {isShareModalOpen && currentNote && (
+        <ShareModal
+          note={currentNote}
+          onClose={() => setIsShareModalOpen(false)}
+        />
       )}
     </div>
   );
 };
 
-export default NoteEditor; 
+export default NoteEditor;

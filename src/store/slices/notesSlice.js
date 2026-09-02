@@ -1,149 +1,297 @@
 import { createSlice } from '@reduxjs/toolkit';
 
+const getStoredUserId = () => {
+  try {
+    const userData = localStorage.getItem('user');
+    if (!userData) return null;
+    const parsed = JSON.parse(userData);
+    return parsed?._id || parsed?.id || null;
+  } catch (e) {
+    return null;
+  }
+};
+
+export const doesNoteMatchFilter = (note, activeFilter, selectedTag, currentUserId) => {
+  if (!note) return false;
+
+  const userId = currentUserId || getStoredUserId();
+  const isTrashed = !!note.isTrashed;
+  const isArchived = !!note.isArchived;
+  const isPinned = !!note.isPinned;
+  const isFavorite = !!note.isFavorite;
+
+  // Determine ownership
+  let isOwned = note.isOwnedByCurrentUser;
+  if (userId && note.createdBy) {
+    const creatorId = note.createdBy._id ? String(note.createdBy._id) : String(note.createdBy);
+    isOwned = (creatorId === String(userId));
+  }
+  if (isOwned === undefined) {
+    isOwned = true;
+  }
+
+  // Tag filter check
+  if (selectedTag && selectedTag.trim()) {
+    const noteTags = Array.isArray(note.tags) ? note.tags : [];
+    const targetTag = selectedTag.trim().toLowerCase();
+    const hasTag = noteTags.some(t => String(t).trim().toLowerCase() === targetTag);
+    if (!hasTag) return false;
+  }
+
+  // Section filter check
+  switch (activeFilter) {
+    case 'trash':
+      return isTrashed;
+    case 'archived':
+      return isArchived && !isTrashed;
+    case 'mine':
+      return !isTrashed && !isArchived && isOwned;
+    case 'shared':
+      return !isTrashed && !isArchived && !isOwned;
+    case 'pinned':
+      return !isTrashed && !isArchived && isPinned;
+    case 'favorites':
+    case 'saved':
+      return !isTrashed && !isArchived && isFavorite;
+    case 'all':
+    default:
+      return !isTrashed && !isArchived;
+  }
+};
+
+const getStoredFilter = () => {
+  try {
+    return localStorage.getItem('activeFilter') || 'all';
+  } catch (e) {
+    return 'all';
+  }
+};
+
+const getStoredTag = () => {
+  try {
+    return localStorage.getItem('selectedTag') || '';
+  } catch (e) {
+    return '';
+  }
+};
+
 const initialState = {
   notes: [],
   currentNote: null,
+  tags: [],
+  activeFilter: getStoredFilter(), // 'all' | 'mine' | 'shared' | 'pinned' | 'archived' | 'trash' | 'favorites' | 'saved'
+  selectedTag: getStoredTag(),
+  searchQuery: '',
+  sortBy: 'updated',
+  activeRoomUsers: [],
+  pagination: null,
   loading: false,
   error: null,
+  currentUserId: getStoredUserId(),
 };
 
 const notesSlice = createSlice({
   name: 'notes',
   initialState,
   reducers: {
+    setCurrentUserId: (state, action) => {
+      state.currentUserId = action.payload;
+    },
+
     setNotes: (state, action) => {
-      console.log('Setting notes in store:', action.payload);
-      // Make sure action.payload is an array
-      const notesArray = Array.isArray(action.payload) ? action.payload : [];
-      
-      if (state.notes.length === 0) {
-        // First load, just set the notes directly
-        state.notes = notesArray;
+      if (Array.isArray(action.payload)) {
+        state.notes = action.payload;
+      } else if (action.payload && Array.isArray(action.payload.notes)) {
+        state.notes = action.payload.notes;
+        if (action.payload.pagination) {
+          state.pagination = action.payload.pagination;
+        }
       } else {
-        // Merge notes properly, updating existing notes and adding new ones
-        const mergedNotes = [...state.notes];
-        
-        // Update existing notes and collect IDs
-        notesArray.forEach(newNote => {
-          const existingIndex = mergedNotes.findIndex(note => note._id === newNote._id);
-          if (existingIndex !== -1) {
-            // Update existing note
-            mergedNotes[existingIndex] = { ...mergedNotes[existingIndex], ...newNote };
-          } else {
-            // Add new note
-            mergedNotes.push(newNote);
-          }
-        });
-        
-        // Sort by last updated
-        mergedNotes.sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated));
-        state.notes = mergedNotes;
+        state.notes = [];
       }
-      
       state.loading = false;
       state.error = null;
     },
+
+    setPagination: (state, action) => {
+      state.pagination = action.payload;
+    },
+
     setCurrentNote: (state, action) => {
-      // Update the current note in the notes array as well to ensure consistency
+      state.currentNote = action.payload;
       if (action.payload) {
-        const noteIndex = state.notes.findIndex(note => note._id === action.payload._id);
+        const noteIndex = state.notes.findIndex(n => n._id === action.payload._id);
         if (noteIndex !== -1) {
           state.notes[noteIndex] = { ...state.notes[noteIndex], ...action.payload };
-        } else {
-          // If the note doesn't exist in the array, add it
-          state.notes.push(action.payload);
         }
       }
-      state.currentNote = action.payload;
     },
+
     updateNote: (state, action) => {
-      if (!action.payload || !action.payload._id) {
-        console.error('Invalid note update payload:', action.payload);
-        return;
-      }
-      
-      console.log('Updating note in Redux:', action.payload);
-      const index = state.notes.findIndex(note => note._id === action.payload._id);
-      
-      if (index !== -1) {
-        // Preserve important fields if they exist in the current note but not in the payload
-        const preservedFields = { 
-          collaborators: state.notes[index].collaborators,
-          createdBy: state.notes[index].createdBy
-        };
-        
-        state.notes[index] = {
-          ...state.notes[index],
-          ...action.payload,
-          // Ensure we don't lose collaborators or creator info in real-time updates
-          collaborators: action.payload.collaborators || preservedFields.collaborators,
-          createdBy: action.payload.createdBy || preservedFields.createdBy,
-          lastUpdated: action.payload.lastUpdated || new Date().toISOString()
-        };
-      } else {
-        // If the note doesn't exist in our state, add it
-        state.notes.push({
-          ...action.payload,
-          lastUpdated: action.payload.lastUpdated || new Date().toISOString()
-        });
-      }
-      
-      // Also update currentNote if it's the same note
-      if (state.currentNote?._id === action.payload._id) {
-        state.currentNote = {
-          ...state.currentNote,
-          ...action.payload,
-          lastUpdated: action.payload.lastUpdated || new Date().toISOString()
-        };
-      }
-    },
-    addNote: (state, action) => {
-      // Check if note already exists
-      const exists = state.notes.some(note => note._id === action.payload._id);
-      if (!exists) {
-        state.notes.unshift(action.payload);
-      } else {
-        // Update the existing note
-        const index = state.notes.findIndex(note => note._id === action.payload._id);
+      if (!action.payload || !action.payload._id) return;
+
+      const payloadNote = action.payload;
+      const index = state.notes.findIndex(n => n._id === payloadNote._id);
+      const existing = index !== -1 ? state.notes[index] : null;
+      const merged = existing ? { ...existing, ...payloadNote } : payloadNote;
+
+      const matches = doesNoteMatchFilter(merged, state.activeFilter, state.selectedTag, state.currentUserId);
+
+      if (matches) {
         if (index !== -1) {
           state.notes[index] = {
-            ...state.notes[index],
-            ...action.payload
+            ...merged,
+            lastUpdated: payloadNote.lastUpdated || new Date().toISOString()
           };
+        } else {
+          state.notes.unshift({
+            ...merged,
+            lastUpdated: payloadNote.lastUpdated || new Date().toISOString()
+          });
+        }
+      } else {
+        if (index !== -1) {
+          state.notes.splice(index, 1);
+          if (state.pagination && state.pagination.totalNotes > 0) {
+            state.pagination.totalNotes -= 1;
+          }
+        }
+      }
+
+      if (state.currentNote?._id === payloadNote._id) {
+        state.currentNote = {
+          ...state.currentNote,
+          ...payloadNote,
+          lastUpdated: payloadNote.lastUpdated || new Date().toISOString()
+        };
+      }
+    },
+
+    addNote: (state, action) => {
+      if (!action.payload || !action.payload._id) return;
+      const payloadNote = action.payload;
+      const matches = doesNoteMatchFilter(payloadNote, state.activeFilter, state.selectedTag, state.currentUserId);
+      const index = state.notes.findIndex(n => n._id === payloadNote._id);
+
+      if (matches) {
+        if (index === -1) {
+          state.notes.unshift(payloadNote);
+          if (state.pagination) {
+            state.pagination.totalNotes = (state.pagination.totalNotes || 0) + 1;
+          }
+        } else {
+          state.notes[index] = { ...state.notes[index], ...payloadNote };
+        }
+      } else if (index !== -1) {
+        state.notes.splice(index, 1);
+        if (state.pagination && state.pagination.totalNotes > 0) {
+          state.pagination.totalNotes -= 1;
         }
       }
     },
+
     removeNote: (state, action) => {
-      state.notes = state.notes.filter(note => note._id !== action.payload);
+      state.notes = state.notes.filter(n => n._id !== action.payload);
+      if (state.pagination && state.pagination.totalNotes > 0) {
+        state.pagination.totalNotes -= 1;
+      }
       if (state.currentNote?._id === action.payload) {
         state.currentNote = null;
       }
     },
+
+    setTags: (state, action) => {
+      state.tags = Array.isArray(action.payload) ? action.payload : [];
+    },
+
+    addTagToStore: (state, action) => {
+      const tag = String(action.payload).trim();
+      if (tag && !state.tags.includes(tag)) {
+        state.tags.push(tag);
+      }
+    },
+
+    setActiveFilter: (state, action) => {
+      state.activeFilter = action.payload;
+      state.selectedTag = ''; // Clear selected tag when switching filters
+      try {
+        localStorage.setItem('activeFilter', action.payload);
+        localStorage.removeItem('selectedTag');
+      } catch (e) { }
+      state.notes = [];
+      state.loading = true;
+    },
+
+    setSelectedTag: (state, action) => {
+      state.selectedTag = action.payload;
+      if (action.payload && state.activeFilter !== 'all' && state.activeFilter !== 'mine') {
+        state.activeFilter = 'all';
+      }
+      try {
+        localStorage.setItem('selectedTag', action.payload);
+        if (state.activeFilter) localStorage.setItem('activeFilter', state.activeFilter);
+      } catch (e) { }
+      state.notes = [];
+      state.loading = true;
+    },
+
+    setSearchQuery: (state, action) => {
+      state.searchQuery = action.payload;
+    },
+
+    setSortBy: (state, action) => {
+      state.sortBy = action.payload;
+    },
+
+    setActiveRoomUsers: (state, action) => {
+      state.activeRoomUsers = Array.isArray(action.payload) ? action.payload : [];
+    },
+
     setLoading: (state, action) => {
       state.loading = action.payload;
     },
+
     setError: (state, action) => {
       state.error = action.payload;
       state.loading = false;
     },
+
     clearNotes: (state) => {
       state.notes = [];
       state.currentNote = null;
+      state.tags = [];
+      state.activeFilter = 'all';
+      state.selectedTag = '';
+      state.activeRoomUsers = [];
+      state.pagination = null;
       state.loading = false;
       state.error = null;
+      try {
+        localStorage.removeItem('activeFilter');
+        localStorage.removeItem('selectedTag');
+      } catch (e) { }
     }
   },
 });
 
 export const {
+  setCurrentUserId,
   setNotes,
+  setPagination,
   setCurrentNote,
   updateNote,
   addNote,
   removeNote,
+  setTags,
+  addTagToStore,
+  setActiveFilter,
+  setSelectedTag,
+  setSearchQuery,
+  setSortBy,
+  setActiveRoomUsers,
   setLoading,
   setError,
   clearNotes
 } = notesSlice.actions;
 
-export default notesSlice.reducer; 
+export default notesSlice.reducer;

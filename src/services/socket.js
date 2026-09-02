@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 import { store } from '../store';
-import { updateNote } from '../store/slices/notesSlice';
+import { updateNote, setActiveRoomUsers } from '../store/slices/notesSlice';
 import toast from 'react-hot-toast';
 import throttle from 'lodash/throttle';
 
@@ -11,12 +11,7 @@ let currentNoteId = null;
 
 export const initializeSocket = (token) => {
   if (socket) {
-    // If already connected, just return
-    if (socket.connected) {
-      console.log('Socket already connected');
-      return;
-    }
-    // If disconnected, clean up first
+    if (socket.connected) return;
     socket.disconnect();
     socket = null;
   }
@@ -34,7 +29,6 @@ export const initializeSocket = (token) => {
 
   socket.on('connect', () => {
     console.log('Socket connected');
-    // Rejoin current note room if any
     if (currentNoteId) {
       joinNoteRoom(currentNoteId);
     }
@@ -42,69 +36,59 @@ export const initializeSocket = (token) => {
 
   socket.on('disconnect', () => {
     console.log('Socket disconnected');
+    store.dispatch(setActiveRoomUsers([]));
   });
 
   socket.on('connect_error', (error) => {
     console.error('Socket connection error:', error);
-    toast.error('Lost connection to server. Trying to reconnect...');
   });
 
   socket.on('note-updated', (data) => {
-    console.log('Received note update:', data);
     store.dispatch(updateNote(data));
-    // Don't show toast here as the notification will come through the notification event
+  });
+
+  socket.on('room-presence-updated', (data) => {
+    if (data.noteId === currentNoteId) {
+      store.dispatch(setActiveRoomUsers(data.activeUsers || []));
+    }
   });
 
   socket.on('notification', (data) => {
-    console.log('Received notification:', data);
     toast(data.message, {
       icon: '📝',
+      duration: 4000
     });
   });
 };
 
 export const joinNoteRoom = (noteId) => {
-  if (!socket?.connected) {
-    console.warn('Socket not connected when trying to join room');
-    return;
-  }
+  if (!socket?.connected) return;
   currentNoteId = noteId;
   socket.emit('join-note', noteId);
-  console.log('Joining note room:', noteId);
 };
 
 export const leaveNoteRoom = (noteId) => {
-  if (!socket?.connected) {
-    console.warn('Socket not connected when trying to leave room');
-    return;
-  }
-  currentNoteId = null;
+  if (!socket?.connected) return;
   socket.emit('leave-note', noteId);
-  console.log('Leaving note room:', noteId);
+  currentNoteId = null;
+  store.dispatch(setActiveRoomUsers([]));
 };
 
 export const updateNoteInRealTime = throttle((noteId, content, title) => {
-  if (!socket?.connected) {
-    console.warn('Socket not connected when trying to update note');
-    return;
-  }
-  
-  // Emit the update immediately
-  socket.volatile.emit('note-update', { 
-    noteId, 
-    content, 
+  if (!socket?.connected) return;
+  socket.volatile.emit('note-update', {
+    noteId,
+    content,
     title,
-    timestamp: Date.now() // Add timestamp for better sync
+    timestamp: Date.now()
   });
-  
-  console.log('Sending note update:', { noteId, timestamp: Date.now() });
-}, 100); // Reduced from 150ms to 100ms for better responsiveness
+}, 100);
 
 export const disconnectSocket = () => {
   if (socket) {
     currentNoteId = null;
     socket.disconnect();
     socket = null;
-    console.log('Socket disconnected manually');
+    store.dispatch(setActiveRoomUsers([]));
   }
-}; 
+};

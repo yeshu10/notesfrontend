@@ -1,30 +1,28 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import api from '../../services/api';
 
 // Async thunks
-export const getNotifications = createAsyncThunk(
-    'notifications/getNotifications',
-    async ({ page = 1, limit = 10, unreadOnly = false }) => {
-        const response = await axios.get(`/api/notifications`, {
-            params: { page, limit, unreadOnly }
-        });
+export const fetchNotifications = createAsyncThunk(
+    'notifications/fetchNotifications',
+    async (params = {}) => {
+        const response = await api.get('/notifications', { params });
         return response.data;
     }
 );
 
-export const markNotificationsRead = createAsyncThunk(
+export const markNotificationsAsRead = createAsyncThunk(
     'notifications/markRead',
-    async ({ notificationIds }) => {
-        await axios.patch('/api/notifications/read', { notificationIds });
+    async (notificationIds = []) => {
+        const response = await api.patch('/notifications/read', { notificationIds });
         return notificationIds;
     }
 );
 
-export const deleteNotifications = createAsyncThunk(
-    'notifications/delete',
-    async ({ notificationIds }) => {
-        await axios.delete('/api/notifications', { data: { notificationIds } });
-        return notificationIds;
+export const clearNotificationsList = createAsyncThunk(
+    'notifications/clear',
+    async () => {
+        await api.delete('/notifications');
+        return true;
     }
 );
 
@@ -34,7 +32,6 @@ const notificationsSlice = createSlice({
         notifications: [],
         loading: false,
         error: null,
-        pagination: null,
         unreadCount: 0
     },
     reducers: {
@@ -51,44 +48,30 @@ const notificationsSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder
-            // Get notifications
-            .addCase(getNotifications.pending, (state) => {
+            .addCase(fetchNotifications.pending, (state) => {
                 state.loading = true;
                 state.error = null;
             })
-            .addCase(getNotifications.fulfilled, (state, action) => {
+            .addCase(fetchNotifications.fulfilled, (state, action) => {
                 state.loading = false;
-                state.notifications = action.payload.notifications;
-                state.pagination = action.payload.pagination;
-                state.unreadCount = action.payload.notifications.filter(n => !n.read).length;
+                state.notifications = action.payload.notifications || [];
+                state.unreadCount = (action.payload.notifications || []).filter(n => !n.read).length;
             })
-            .addCase(getNotifications.rejected, (state, action) => {
+            .addCase(fetchNotifications.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.error.message;
             })
-
-            // Mark as read
-            .addCase(markNotificationsRead.fulfilled, (state, action) => {
-                const notificationIds = action.payload;
-                state.notifications = state.notifications.map(notification => 
-                    notificationIds.includes(notification._id)
-                        ? { ...notification, read: true }
-                        : notification
-                );
-                state.unreadCount = state.notifications.filter(n => !n.read).length;
+            .addCase(markNotificationsAsRead.fulfilled, (state) => {
+                state.notifications = state.notifications.map(n => ({ ...n, read: true }));
+                state.unreadCount = 0;
             })
-
-            // Delete notifications
-            .addCase(deleteNotifications.fulfilled, (state, action) => {
-                const notificationIds = action.payload;
-                state.notifications = state.notifications.filter(
-                    notification => !notificationIds.includes(notification._id)
-                );
-                state.unreadCount = state.notifications.filter(n => !n.read).length;
+            .addCase(clearNotificationsList.fulfilled, (state) => {
+                state.notifications = [];
+                state.unreadCount = 0;
             });
     }
 });
 
 export const { addNotification, clearNotifications } = notificationsSlice.actions;
 
-export default notificationsSlice.reducer; 
+export default notificationsSlice.reducer;
