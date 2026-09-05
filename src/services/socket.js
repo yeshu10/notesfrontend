@@ -4,7 +4,7 @@ import { updateNote, setActiveRoomUsers } from '../store/slices/notesSlice';
 import toast from 'react-hot-toast';
 import throttle from 'lodash/throttle';
 
-const backendURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+const backendURL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
 let socket = null;
 let currentNoteId = null;
