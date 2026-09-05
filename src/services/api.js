@@ -216,6 +216,36 @@ export const notesAPI = {
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Failed to search users');
     }
+  },
+
+  getNoteVersions: async (id) => {
+    try {
+      const noteId = extractId(id);
+      const response = await api.get(`/notes/${noteId}/versions`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch version history');
+    }
+  },
+
+  getNoteVersion: async (id, versionId) => {
+    try {
+      const noteId = extractId(id);
+      const response = await api.get(`/notes/${noteId}/versions/${versionId}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch version details');
+    }
+  },
+
+  restoreNoteVersion: async (id, versionId) => {
+    try {
+      const noteId = extractId(id);
+      const response = await api.post(`/notes/${noteId}/versions/${versionId}/restore`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to restore note version');
+    }
   }
 };
 

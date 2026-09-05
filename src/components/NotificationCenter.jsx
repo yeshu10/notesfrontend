@@ -26,8 +26,9 @@ const NotificationCenter = () => {
     };
 
     const handleNotificationClick = (noteId) => {
-        if (noteId) {
-            navigate(`/notes/${noteId}`);
+        const targetId = typeof noteId === 'object' ? (noteId?._id || noteId?.id) : noteId;
+        if (targetId) {
+            navigate(`/notes/${targetId}`);
             setIsOpen(false);
         }
     };
@@ -36,11 +37,29 @@ const NotificationCenter = () => {
         dispatch(clearNotificationsList());
     };
 
+    const getNotificationIcon = (type) => {
+        switch (type) {
+            case 'share':
+            case 'NOTE_SHARED':
+                return '👥';
+            case 'permission_change':
+            case 'PERMISSION_CHANGED':
+                return '🔑';
+            case 'restored':
+            case 'NOTE_RESTORED':
+                return '🔄';
+            case 'update':
+            case 'NOTE_EDITED':
+            default:
+                return '📝';
+        }
+    };
+
     return (
         <div className="relative">
             <button
                 onClick={handleOpenToggle}
-                className="relative p-2 text-white hover:bg-white/10 rounded-full transition focus:outline-none"
+                className="relative p-2 text-white hover:bg-white/10 rounded-full transition focus:outline-none cursor-pointer"
                 title="Notifications"
             >
                 <FaBell size={18} />
@@ -67,7 +86,7 @@ const NotificationCenter = () => {
                             {notifications.length > 0 && (
                                 <button
                                     onClick={handleClearAll}
-                                    className="text-xs text-red-500 hover:text-red-700 flex items-center space-x-1 font-semibold p-1 hover:bg-red-50 rounded transition"
+                                    className="text-xs text-red-500 hover:text-red-700 flex items-center space-x-1 font-semibold p-1 hover:bg-red-50 rounded transition cursor-pointer"
                                 >
                                     <FaTrashAlt size={11} />
                                     <span>Clear All</span>
@@ -95,14 +114,14 @@ const NotificationCenter = () => {
                                             }`}
                                     >
                                         <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 text-white flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 shadow-sm">
-                                            📝
+                                            {getNotificationIcon(notif.type)}
                                         </div>
                                         <div className="flex-grow min-w-0">
                                             <p className="text-xs text-gray-800 font-medium leading-snug">
                                                 {notif.message}
                                             </p>
                                             <p className="text-[10px] text-gray-400 mt-1">
-                                                {new Date(notif.createdAt).toLocaleString()}
+                                                {new Date(notif.createdAt || Date.now()).toLocaleString()}
                                             </p>
                                         </div>
                                     </div>

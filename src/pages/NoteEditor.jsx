@@ -10,9 +10,11 @@ import { notesAPI } from '../services/api';
 import {
   joinNoteRoom,
   leaveNoteRoom,
-  updateNoteInRealTime
+  updateNoteInRealTime,
+  subscribeToNoteUpdates
 } from '../services/socket';
 import ShareModal from '../components/ShareModal';
+import VersionHistoryModal from '../components/VersionHistoryModal';
 import toast from 'react-hot-toast';
 import debounce from 'lodash/debounce';
 import {
@@ -35,7 +37,8 @@ import {
   FaCheck,
   FaSync,
   FaLock,
-  FaSave
+  FaSave,
+  FaHistory
 } from 'react-icons/fa';
 
 const NoteEditor = () => {
@@ -53,13 +56,27 @@ const NoteEditor = () => {
   const [lastSavedTime, setLastSavedTime] = useState(null);
   const [viewMode, setViewMode] = useState('edit'); // 'edit', 'split', 'preview'
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [newTagInput, setNewTagInput] = useState('');
   const [showTagDropdown, setShowTagDropdown] = useState(false);
 
+  const handleVersionRestored = (restoredNote) => {
+    if (!restoredNote) return;
+    setTitle(restoredNote.title || '');
+    setContent(restoredNote.content || '');
+    if (restoredNote.tags) setNoteTags(restoredNote.tags);
+    dispatch(setCurrentNote(restoredNote));
+    dispatch(updateNote(restoredNote));
+    setLastSavedTime(new Date());
+    if (id) {
+      updateNoteInRealTime(id, restoredNote.content, restoredNote.title);
+    }
+  };
+
   const textareaRef = useRef(null);
   const isMountedRef = useRef(true);
-
   const isLoadedRef = useRef(false);
+  const sessionIdRef = useRef(`session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`);
 
   // Load note details
   useEffect(() => {
@@ -98,6 +115,49 @@ const NoteEditor = () => {
   const userPermission = currentNote?.userPermission || (isOwner ? 'owner' : 'editor');
   const canEdit = isOwner || userPermission === 'editor' || userPermission === 'write';
 
+  const currentUserId = user?.id || user?._id;
+
+  // Real-time synchronization for incoming WebSocket edits from other collaborators
+  useEffect(() => {
+    if (!id) return;
+
+    const unsubscribe = subscribeToNoteUpdates((data) => {
+      if (String(data._id) === String(id)) {
+        const editorUserId = data.updatedBy?.id;
+        const isFromOtherUser = editorUserId && String(editorUserId) !== String(currentUserId);
+
+        if (isFromOtherUser) {
+          if (data.title !== undefined) {
+            setTitle(data.title);
+          }
+          if (data.content !== undefined) {
+            const textarea = textareaRef.current;
+            const start = textarea ? textarea.selectionStart : null;
+            const end = textarea ? textarea.selectionEnd : null;
+
+            setContent(data.content);
+
+            if (textarea && start !== null && end !== null && document.activeElement === textarea) {
+              setTimeout(() => {
+                try {
+                  textarea.setSelectionRange(start, end);
+                } catch (e) { }
+              }, 0);
+            }
+          }
+          if (data.tags !== undefined) {
+            setNoteTags(data.tags);
+          }
+          setLastSavedTime(new Date());
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [id, currentUserId]);
+
   // Immediate save helper for explicit save / navigation
   const saveNoteNow = async (updatedTitle, updatedContent, updatedTags) => {
     if (!canEdit || !id) return;
@@ -106,7 +166,8 @@ const NoteEditor = () => {
       const result = await notesAPI.updateNote(id, {
         title: (updatedTitle !== undefined ? updatedTitle : title).trim() || 'Untitled Note',
         content: updatedContent !== undefined ? updatedContent : content,
-        tags: updatedTags !== undefined ? updatedTags : noteTags
+        tags: updatedTags !== undefined ? updatedTags : noteTags,
+        sessionId: sessionIdRef.current
       });
       dispatch(updateNote(result));
       setLastSavedTime(new Date());
@@ -128,7 +189,8 @@ const NoteEditor = () => {
         const result = await notesAPI.updateNote(id, {
           title: title.trim() || 'Untitled Note',
           content,
-          tags: noteTags
+          tags: noteTags,
+          sessionId: sessionIdRef.current
         });
         dispatch(updateNote(result));
         setLastSavedTime(new Date());
@@ -170,7 +232,7 @@ const NoteEditor = () => {
     const val = e.target.value;
     setTitle(val);
     if (canEdit && id) {
-      updateNoteInRealTime(id, content, val);
+      updateNoteInRealTime(id, content, val, sessionIdRef.current);
     }
   };
 
@@ -179,7 +241,7 @@ const NoteEditor = () => {
     const val = e.target.value;
     setContent(val);
     if (canEdit && id) {
-      updateNoteInRealTime(id, val, title);
+      updateNoteInRealTime(id, val, title, sessionIdRef.current);
     }
   };
 
@@ -222,11 +284,9 @@ const NoteEditor = () => {
 
     const newContent = text.substring(0, start) + replacement + text.substring(end);
     setContent(newContent);
-    noteDataRef.current.content = newContent;
 
     if (id) {
       updateNoteInRealTime(id, newContent, title);
-      debouncedSaveRef.current(id);
     }
 
     setTimeout(() => {
@@ -324,6 +384,16 @@ const NoteEditor = () => {
               title={currentNote?.isPinned ? 'Unpin note' : 'Pin note'}
             >
               <FaThumbtack size={14} />
+            </button>
+
+            {/* Version History Button */}
+            <button
+              onClick={() => setIsHistoryModalOpen(true)}
+              className="p-2 text-gray-600 hover:text-purple-700 hover:bg-purple-50 rounded-xl transition flex items-center space-x-1.5"
+              title="Version History"
+            >
+              <FaHistory size={14} />
+              <span className="hidden lg:inline text-xs font-bold">History</span>
             </button>
 
             {/* Manual Save Button */}
@@ -565,6 +635,17 @@ const NoteEditor = () => {
         <ShareModal
           note={currentNote}
           onClose={() => setIsShareModalOpen(false)}
+        />
+      )}
+
+      {/* Version History Modal */}
+      {isHistoryModalOpen && (
+        <VersionHistoryModal
+          noteId={id}
+          currentNote={currentNote}
+          canEdit={canEdit}
+          onClose={() => setIsHistoryModalOpen(false)}
+          onVersionRestored={handleVersionRestored}
         />
       )}
     </div>
