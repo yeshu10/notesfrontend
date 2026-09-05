@@ -249,4 +249,39 @@ export const notesAPI = {
   }
 };
 
+export const remindersAPI = {
+  setReminder: async (noteId, date, time, reminderAt) => {
+    try {
+      const response = await api.post('/reminders', { noteId, date, time, reminderAt });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to set reminder');
+    }
+  },
+  getReminders: async () => {
+    try {
+      const response = await api.get('/reminders');
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch reminders');
+    }
+  },
+  getNoteReminder: async (noteId) => {
+    try {
+      const response = await api.get(`/reminders/note/${noteId}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch note reminder');
+    }
+  },
+  deleteReminder: async (noteId) => {
+    try {
+      const response = await api.delete(`/reminders/note/${noteId}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to remove reminder');
+    }
+  }
+};
+
 export default api;

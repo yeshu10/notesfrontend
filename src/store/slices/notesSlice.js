@@ -53,6 +53,8 @@ export const doesNoteMatchFilter = (note, activeFilter, selectedTag, currentUser
     case 'favorites':
     case 'saved':
       return !isTrashed && !isArchived && isFavorite;
+    case 'reminders':
+      return !isTrashed;
     case 'all':
     default:
       return !isTrashed && !isArchived;

@@ -14,7 +14,8 @@ import {
     FaTag,
     FaPlus,
     FaTimes,
-    FaBroom
+    FaBroom,
+    FaClock
 } from 'react-icons/fa';
 import TagManagerModal from './TagManagerModal';
 
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
     { id: 'all', label: 'All Notes', icon: FaStickyNote },
     { id: 'mine', label: 'My Notes', icon: FaUser },
     { id: 'shared', label: 'Shared With Me', icon: FaUserFriends },
+    { id: 'reminders', label: 'Reminders', icon: FaClock },
     { id: 'pinned', label: 'Pinned Notes', icon: FaThumbtack },
     { id: 'favorites', label: 'Favorites', icon: FaStar },
     { id: 'archived', label: 'Archived', icon: FaArchive },
@@ -82,8 +84,8 @@ const Sidebar = ({ mobileOpen, setMobileOpen, onRefreshNotes }) => {
                                     key={item.id}
                                     onClick={() => handleFilterClick(item.id)}
                                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition duration-200 ${isActive
-                                            ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-md'
-                                            : 'text-gray-700 hover:bg-purple-50 hover:text-purple-700'
+                                        ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-md'
+                                        : 'text-gray-700 hover:bg-purple-50 hover:text-purple-700'
                                         }`}
                                 >
                                     <div className="flex items-center space-x-3">
@@ -131,8 +133,8 @@ const Sidebar = ({ mobileOpen, setMobileOpen, onRefreshNotes }) => {
                                         key={tag}
                                         onClick={() => handleTagClick(tag)}
                                         className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition ${isTagActive
-                                                ? 'bg-purple-100 text-purple-800 font-bold border border-purple-300'
-                                                : 'text-gray-600 hover:bg-purple-50 hover:text-purple-700'
+                                            ? 'bg-purple-100 text-purple-800 font-bold border border-purple-300'
+                                            : 'text-gray-600 hover:bg-purple-50 hover:text-purple-700'
                                             }`}
                                     >
                                         <div className="flex items-center space-x-2 truncate">

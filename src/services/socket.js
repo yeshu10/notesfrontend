@@ -11,6 +11,40 @@ let socket = null;
 let currentNoteId = null;
 const noteUpdateListeners = new Set();
 
+const playNotificationSound = () => {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+
+    // First note (E5 = ~659 Hz)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(659.25, ctx.currentTime);
+    gain1.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(ctx.currentTime);
+    osc1.stop(ctx.currentTime + 0.3);
+
+    // Second note (B5 = ~987 Hz)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(987.77, ctx.currentTime + 0.12);
+    gain2.gain.setValueAtTime(0.2, ctx.currentTime + 0.12);
+    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(ctx.currentTime + 0.12);
+    osc2.stop(ctx.currentTime + 0.5);
+  } catch (err) {
+    // Ignore audio play errors silently if user hasn't interacted with DOM yet
+  }
+};
+
 export const initializeSocket = (token) => {
   const authToken = token || localStorage.getItem('token');
   if (!authToken) return null;
@@ -72,9 +106,10 @@ export const initializeSocket = (token) => {
 
   socket.on('notification', (data) => {
     store.dispatch(addNotification(data));
+    playNotificationSound();
     toast(data.message, {
-      icon: '🔔',
-      duration: 4000
+      icon: data.type === 'REMINDER' ? '⏰' : '🔔',
+      duration: 6000
     });
   });
 

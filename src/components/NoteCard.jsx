@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateNote, removeNote, setSelectedTag } from '../store/slices/notesSlice';
 import { notesAPI } from '../services/api';
+import { remindersAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import {
     FaThumbtack,
@@ -15,13 +16,30 @@ import {
     FaUserFriends,
     FaPencilAlt,
     FaEye,
-    FaEdit
+    FaEdit,
+    FaClock
 } from 'react-icons/fa';
 
 const NoteCard = ({ note, onShareClick }) => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
+
+    const [reminder, setReminder] = useState(null);
+
+    useEffect(() => {
+        let isMounted = true;
+        if (note?._id) {
+            remindersAPI.getNoteReminder(note._id).then((data) => {
+                if (isMounted && data && data.isActive && !data.isTriggered) {
+                    setReminder(data);
+                } else if (isMounted) {
+                    setReminder(null);
+                }
+            }).catch(() => { });
+        }
+        return () => { isMounted = false; };
+    }, [note._id]);
 
     const isOwner = note.isOwnedByCurrentUser || (note.createdBy && (note.createdBy._id === user?.id || note.createdBy._id === user?._id));
     const userPermission = note.userPermission || (isOwner ? 'owner' : 'editor');
@@ -98,8 +116,8 @@ const NoteCard = ({ note, onShareClick }) => {
         >
             {/* Top Accent Line */}
             <div className={`absolute top-0 left-0 right-0 h-1.5 ${note.isPinned
-                    ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-500'
-                    : 'bg-gradient-to-r from-gray-200 to-purple-200 group-hover:from-indigo-400 group-hover:to-pink-400'
+                ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-500'
+                : 'bg-gradient-to-r from-gray-200 to-purple-200 group-hover:from-indigo-400 group-hover:to-pink-400'
                 }`} />
 
             <div>
@@ -107,10 +125,10 @@ const NoteCard = ({ note, onShareClick }) => {
                 <div className="flex items-center justify-between mb-3 pt-1">
                     {/* Permission / Role pill */}
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide flex items-center space-x-1 ${isOwner
-                            ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
-                            : userPermission === 'editor'
-                                ? 'bg-purple-100 text-purple-800 border border-purple-200'
-                                : 'bg-gray-100 text-gray-700 border border-gray-200'
+                        ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                        : userPermission === 'editor'
+                            ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                            : 'bg-gray-100 text-gray-700 border border-gray-200'
                         }`}>
                         {isOwner ? <FaPencilAlt size={8} /> : userPermission === 'editor' ? <FaEdit size={8} /> : <FaEye size={8} />}
                         <span>{isOwner ? 'Owner' : userPermission === 'editor' ? 'Editor' : 'Viewer'}</span>
@@ -137,6 +155,14 @@ const NoteCard = ({ note, onShareClick }) => {
                         </button>
                     </div>
                 </div>
+
+                {/* Active Reminder Pill */}
+                {reminder && (
+                    <div className="flex items-center space-x-1.5 px-2.5 py-1 bg-amber-50 text-amber-800 text-[11px] font-bold rounded-lg border border-amber-200/80 mb-2.5 w-fit shadow-xs">
+                        <FaClock size={11} className="text-amber-600" />
+                        <span>{new Date(reminder.reminderAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                    </div>
+                )}
 
                 {/* Note Title */}
                 <h3 className="text-base font-bold text-gray-800 line-clamp-1 mb-1.5 group-hover:text-purple-700 transition">

@@ -124,6 +124,7 @@ const Dashboard = () => {
       case 'shared': return 'Notes Shared With Me';
       case 'pinned': return 'Pinned Notes';
       case 'favorites': return 'Favorite Notes';
+      case 'reminders': return 'Upcoming Reminders';
       case 'archived': return 'Archived Notes';
       case 'trash': return 'Trash';
       default: return 'All Notes';

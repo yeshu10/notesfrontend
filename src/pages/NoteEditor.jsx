@@ -38,8 +38,11 @@ import {
   FaSync,
   FaLock,
   FaSave,
-  FaHistory
+  FaHistory,
+  FaClock
 } from 'react-icons/fa';
+import { remindersAPI } from '../services/api';
+import ReminderModal from '../components/ReminderModal';
 
 const NoteEditor = () => {
   const { id } = useParams();
@@ -57,6 +60,8 @@ const NoteEditor = () => {
   const [viewMode, setViewMode] = useState('edit'); // 'edit', 'split', 'preview'
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [reminder, setReminder] = useState(null);
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [newTagInput, setNewTagInput] = useState('');
   const [showTagDropdown, setShowTagDropdown] = useState(false);
 
@@ -103,6 +108,16 @@ const NoteEditor = () => {
     };
 
     fetchNote();
+
+    if (id) {
+      remindersAPI.getNoteReminder(id).then((r) => {
+        if (r && r.isActive && !r.isTriggered) {
+          setReminder(r);
+        } else {
+          setReminder(null);
+        }
+      }).catch(() => { });
+    }
 
     return () => {
       isMountedRef.current = false;
@@ -396,6 +411,25 @@ const NoteEditor = () => {
               <span className="hidden lg:inline text-xs font-bold">History</span>
             </button>
 
+            {/* Reminder Button */}
+            {canEdit && (
+              <button
+                onClick={() => setIsReminderModalOpen(true)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${reminder
+                  ? 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200'
+                  : 'text-gray-600 hover:text-purple-700 hover:bg-purple-50'
+                  }`}
+                title={reminder ? `Reminder: ${new Date(reminder.reminderAt).toLocaleString()}` : 'Set Reminder'}
+              >
+                <FaClock size={13} className={reminder ? 'text-amber-600 animate-pulse' : 'text-purple-600'} />
+                <span className="hidden sm:inline">
+                  {reminder
+                    ? new Date(reminder.reminderAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : 'Reminder'}
+                </span>
+              </button>
+            )}
+
             {/* Manual Save Button */}
             {canEdit && (
               <button
@@ -646,6 +680,18 @@ const NoteEditor = () => {
           canEdit={canEdit}
           onClose={() => setIsHistoryModalOpen(false)}
           onVersionRestored={handleVersionRestored}
+        />
+      )}
+
+      {/* Reminder Modal */}
+      {isReminderModalOpen && (
+        <ReminderModal
+          noteId={id}
+          noteTitle={title}
+          isOpen={isReminderModalOpen}
+          onClose={() => setIsReminderModalOpen(false)}
+          currentReminder={reminder}
+          onReminderUpdated={(updatedReminder) => setReminder(updatedReminder)}
         />
       )}
     </div>
