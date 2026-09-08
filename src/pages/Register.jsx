@@ -148,11 +148,11 @@ return (
     //     </form>
     //   </div>
     // </div>
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-indigo-100 to-pink-100 py-12 px-4 sm:px-6 lg:px-8">
-  <div className="max-w-md w-full bg-white/70 backdrop-blur-md rounded-xl shadow-xl p-8 space-y-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-indigo-100 to-pink-100 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
+  <div className="max-w-md w-full bg-white/80 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-xl p-6 sm:p-8 space-y-6 sm:space-y-8 border border-white/40">
     <div className="text-center">
-      <h1 className="text-4xl font-extrabold text-purple-600 drop-shadow-md">NoteNest</h1>
-      <h2 className="mt-4 text-2xl font-semibold text-gray-800">Create your account</h2>
+      <h1 className="text-3xl sm:text-4xl font-extrabold text-purple-600 drop-shadow-md">NoteNest</h1>
+      <h2 className="mt-3 sm:mt-4 text-xl sm:text-2xl font-semibold text-gray-800">Create your account</h2>
       <p className="mt-2 text-sm text-gray-600">
         Or{' '}
         <Link
@@ -173,7 +173,7 @@ return (
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none sm:text-sm transition"
+          className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl shadow-sm placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none text-base sm:text-sm transition"
           placeholder="Full Name"
         />
 
@@ -185,7 +185,7 @@ return (
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none sm:text-sm transition"
+          className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl shadow-sm placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none text-base sm:text-sm transition"
           placeholder="Email address"
         />
 
@@ -200,7 +200,7 @@ return (
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             minLength={6}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none sm:text-sm transition"
+            className="w-full px-3.5 py-2.5 pr-10 border border-gray-300 rounded-xl shadow-sm placeholder-gray-500 text-gray-900 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none text-base sm:text-sm transition"
             placeholder="Password (min. 6 characters)"
           />
           <div className="absolute inset-y-0 right-3 flex items-center">
@@ -209,7 +209,7 @@ return (
               onClick={togglePasswordVisibility}
               tabIndex={-1}
               aria-label={showPassword ? "Hide password" : "Show password"}
-              className="text-gray-400 hover:text-gray-600 focus:outline-none transition"
+              className="text-gray-400 hover:text-gray-600 focus:outline-none p-1 transition"
             >
               {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
             </button>
@@ -220,7 +220,7 @@ return (
       <button
         type="submit"
         disabled={loading}
-        className="w-full flex justify-center py-2 px-4 text-sm font-medium rounded-md text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition"
+        className="w-full flex justify-center py-3 px-4 text-sm sm:text-base font-semibold rounded-xl text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition"
       >
         {loading ? 'Creating account...' : 'Create account'}
       </button>

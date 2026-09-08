@@ -160,8 +160,7 @@ const Login = () => {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-500 text-gray-900 text-sm leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-
+            className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl shadow-sm placeholder-gray-500 text-gray-900 text-base sm:text-sm leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             placeholder="Email address"
           />
         </div>
@@ -179,13 +178,13 @@ const Login = () => {
             ref={passwordInputRef}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-500 text-gray-900 text-sm leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full px-3.5 py-2.5 pr-10 border border-gray-300 rounded-xl shadow-sm placeholder-gray-500 text-gray-900 text-base sm:text-sm leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             placeholder="Password"
           />
           <div className="absolute inset-y-0 right-3 flex items-center">
             <button
               type="button"
-              className="text-gray-400 hover:text-indigo-600 transition focus:outline-none"
+              className="text-gray-400 hover:text-indigo-600 transition focus:outline-none p-1"
               onClick={togglePasswordVisibility}
               tabIndex={-1}
               aria-label={showPassword ? 'Hide password' : 'Show password'}
@@ -200,7 +199,7 @@ const Login = () => {
         <button
           type="submit"
           disabled={loading}
-          className={`w-full py-3 sm:py-3.5 px-4 text-sm sm:text-base font-semibold rounded-md shadow-md text-white transition duration-200 ${
+          className={`w-full py-3 sm:py-3.5 px-4 text-sm sm:text-base font-semibold rounded-xl shadow-md text-white transition duration-200 ${
             loading
               ? 'bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300 cursor-not-allowed'
               : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:brightness-110'

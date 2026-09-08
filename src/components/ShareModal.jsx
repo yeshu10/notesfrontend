@@ -96,29 +96,30 @@ const ShareModal = ({ note, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl overflow-hidden animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
+            <div className="bg-white rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-2xl overflow-y-auto max-h-[90vh] animate-in fade-in duration-200">
 
                 {/* Header */}
                 <div className="flex items-center justify-between border-b pb-3 mb-4">
-                    <div className="flex items-center space-x-2 text-indigo-700 font-extrabold text-lg">
-                        <FaShareAlt className="text-pink-500" />
+                    <div className="flex items-center space-x-2 text-indigo-700 font-extrabold text-base sm:text-lg">
+                        <FaShareAlt className="text-pink-500 flex-shrink-0" />
                         <span>Share Note & Manage Roles</span>
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition"
+                        className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition"
+                        aria-label="Close modal"
                     >
                         <FaTimes size={18} />
                     </button>
                 </div>
 
                 {/* Note Title context */}
-                <div className="mb-4 p-3 bg-purple-50 rounded-xl border border-purple-100 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-purple-700 uppercase tracking-wider">
+                <div className="mb-4 p-3 bg-purple-50 rounded-xl border border-purple-100 flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-purple-700 uppercase tracking-wider flex-shrink-0">
                         Target Note
                     </span>
-                    <span className="text-sm font-bold text-gray-800 truncate max-w-[200px]">
+                    <span className="text-xs sm:text-sm font-bold text-gray-800 truncate">
                         "{note?.title || 'Untitled Note'}"
                     </span>
                 </div>
@@ -129,8 +130,8 @@ const ShareModal = ({ note, onClose }) => {
                         <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
                             Invite Registered User by Email
                         </label>
-                        <div className="flex space-x-2">
-                            <div className="relative flex-grow">
+                        <div className="flex flex-col sm:flex-row gap-2">
+                            <div className="relative flex-grow min-w-0">
                                 <input
                                     type="email"
                                     value={email}
@@ -148,11 +149,11 @@ const ShareModal = ({ note, onClose }) => {
                                                 onClick={() => selectUserSuggestion(u)}
                                                 className="p-2.5 hover:bg-indigo-50 cursor-pointer flex items-center justify-between border-b last:border-0"
                                             >
-                                                <div>
-                                                    <p className="text-xs font-bold text-gray-800">{u.name}</p>
-                                                    <p className="text-[11px] text-gray-500">{u.email}</p>
+                                                <div className="min-w-0 mr-2">
+                                                    <p className="text-xs font-bold text-gray-800 truncate">{u.name}</p>
+                                                    <p className="text-[11px] text-gray-500 truncate">{u.email}</p>
                                                 </div>
-                                                <FaUserPlus className="text-indigo-500" size={12} />
+                                                <FaUserPlus className="text-indigo-500 flex-shrink-0" size={12} />
                                             </div>
                                         ))}
                                     </div>
@@ -163,7 +164,7 @@ const ShareModal = ({ note, onClose }) => {
                             <select
                                 value={permission}
                                 onChange={(e) => setPermission(e.target.value)}
-                                className="px-3 py-2 border border-gray-300 rounded-xl text-xs font-semibold text-gray-800 focus:ring-2 focus:ring-indigo-500 bg-gray-50"
+                                className="px-3 py-2 border border-gray-300 rounded-xl text-xs font-semibold text-gray-800 focus:ring-2 focus:ring-indigo-500 bg-gray-50 flex-shrink-0"
                             >
                                 <option value="write">Editor (Can edit)</option>
                                 <option value="read">Viewer (Can read)</option>
@@ -216,19 +217,19 @@ const ShareModal = ({ note, onClose }) => {
                                 return (
                                     <div
                                         key={collabUser._id || Math.random()}
-                                        className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100/70 transition"
+                                        className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100/70 transition gap-2.5"
                                     >
-                                        <div className="flex items-center space-x-2">
-                                            <div className="w-8 h-8 rounded-full bg-purple-500 text-white font-bold text-xs flex items-center justify-center shadow">
+                                        <div className="flex items-center space-x-2 min-w-0 flex-1">
+                                            <div className="w-8 h-8 rounded-full bg-purple-500 text-white font-bold text-xs flex items-center justify-center shadow flex-shrink-0">
                                                 {collabUser.name ? collabUser.name.charAt(0).toUpperCase() : 'C'}
                                             </div>
-                                            <div>
-                                                <p className="text-xs font-bold text-gray-800">{collabUser.name || 'Collaborator'}</p>
-                                                <p className="text-[10px] text-gray-500">{collabUser.email}</p>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-xs font-bold text-gray-800 truncate">{collabUser.name || 'Collaborator'}</p>
+                                                <p className="text-[10px] text-gray-500 truncate">{collabUser.email}</p>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center space-x-2">
+                                        <div className="flex items-center justify-between sm:justify-end space-x-2 w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-gray-200/60">
                                             {/* Permission toggle */}
                                             <select
                                                 value={isWrite ? 'write' : 'read'}
@@ -244,6 +245,7 @@ const ShareModal = ({ note, onClose }) => {
                                                 onClick={() => handleRemoveCollaborator(collabUser._id)}
                                                 className="text-gray-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition"
                                                 title="Remove Access"
+                                                aria-label="Remove Access"
                                             >
                                                 <FaTrash size={12} />
                                             </button>

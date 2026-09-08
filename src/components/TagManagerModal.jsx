@@ -38,17 +38,18 @@ const TagManagerModal = ({ isOpen, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl transform transition-all">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-4 sm:p-6 shadow-2xl overflow-y-auto max-h-[90vh] transform transition-all">
                 {/* Header */}
                 <div className="flex items-center justify-between border-b pb-3 mb-4">
-                    <div className="flex items-center space-x-2 text-indigo-600 font-bold text-lg">
+                    <div className="flex items-center space-x-2 text-indigo-600 font-bold text-base sm:text-lg">
                         <FaTag className="text-pink-500" />
                         <span>Manage Note Tags</span>
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition"
+                        className="text-gray-400 hover:text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition"
+                        aria-label="Close modal"
                     >
                         <FaTimes size={18} />
                     </button>
@@ -60,18 +61,18 @@ const TagManagerModal = ({ isOpen, onClose }) => {
                         e.preventDefault();
                         handleAddTag(newTagName);
                     }}
-                    className="flex space-x-2 mb-6"
+                    className="flex space-x-2 mb-4 sm:mb-6"
                 >
                     <input
                         type="text"
                         value={newTagName}
                         onChange={(e) => setNewTagName(e.target.value)}
                         placeholder="Create custom tag name..."
-                        className="flex-grow px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 text-sm"
+                        className="flex-grow min-w-0 px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 text-sm"
                     />
                     <button
                         type="submit"
-                        className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg text-sm font-semibold hover:brightness-110 flex items-center space-x-1 shadow"
+                        className="px-3.5 sm:px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg text-sm font-semibold hover:brightness-110 flex items-center space-x-1 shadow flex-shrink-0"
                     >
                         <FaPlus size={12} />
                         <span>Add</span>

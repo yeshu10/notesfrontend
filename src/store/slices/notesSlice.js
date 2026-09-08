@@ -41,7 +41,7 @@ export const doesNoteMatchFilter = (note, activeFilter, selectedTag, currentUser
   // Section filter check
   switch (activeFilter) {
     case 'trash':
-      return isTrashed;
+      return isTrashed && !isArchived;
     case 'archived':
       return isArchived && !isTrashed;
     case 'mine':
@@ -54,7 +54,7 @@ export const doesNoteMatchFilter = (note, activeFilter, selectedTag, currentUser
     case 'saved':
       return !isTrashed && !isArchived && isFavorite;
     case 'reminders':
-      return !isTrashed;
+      return !isTrashed && !isArchived;
     case 'all':
     default:
       return !isTrashed && !isArchived;

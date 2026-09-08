@@ -39,10 +39,16 @@ import {
   FaLock,
   FaSave,
   FaHistory,
-  FaClock
+  FaClock,
+  FaArchive,
+  FaTrash,
+  FaUndo,
+  FaComments
 } from 'react-icons/fa';
 import { remindersAPI } from '../services/api';
 import ReminderModal from '../components/ReminderModal';
+import CommentsSection from '../components/CommentsSection';
+import AttachmentsSection from '../components/AttachmentsSection';
 
 const NoteEditor = () => {
   const { id } = useParams();
@@ -64,6 +70,14 @@ const NoteEditor = () => {
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [newTagInput, setNewTagInput] = useState('');
   const [showTagDropdown, setShowTagDropdown] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
+  const commentsSectionRef = useRef(null);
+
+  const scrollToComments = () => {
+    if (commentsSectionRef.current) {
+      commentsSectionRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   const handleVersionRestored = (restoredNote) => {
     if (!restoredNote) return;
@@ -125,10 +139,12 @@ const NoteEditor = () => {
     };
   }, [id, dispatch, navigate]);
 
-  // Determine user permission
+  // Determine user permission & status
   const isOwner = currentNote?.isOwnedByCurrentUser || (currentNote?.createdBy && (currentNote.createdBy._id === user?.id || currentNote.createdBy._id === user?._id));
   const userPermission = currentNote?.userPermission || (isOwner ? 'owner' : 'editor');
-  const canEdit = isOwner || userPermission === 'editor' || userPermission === 'write';
+  const isTrashed = !!currentNote?.isTrashed;
+  const isArchived = !!currentNote?.isArchived;
+  const canEdit = !isTrashed && (isOwner || userPermission === 'editor' || userPermission === 'write');
 
   const currentUserId = user?.id || user?._id;
 
@@ -287,6 +303,68 @@ const NoteEditor = () => {
     }
   };
 
+  // Toggle Archive
+  const handleToggleArchive = async () => {
+    if (!currentNote) return;
+    try {
+      let updated;
+      if (currentNote.isArchived) {
+        updated = await notesAPI.unarchiveNote(currentNote._id);
+      } else {
+        updated = await notesAPI.archiveNote(currentNote._id);
+      }
+      dispatch(setCurrentNote(updated));
+      dispatch(updateNote(updated));
+      toast.success(updated.isArchived ? 'Note archived' : 'Note unarchived');
+    } catch (error) {
+      toast.error(error.message || 'Failed to update archive state');
+    }
+  };
+
+  // Move to Trash
+  const handleMoveToTrash = async () => {
+    if (!currentNote) return;
+    try {
+      const res = await notesAPI.deleteNote(currentNote._id);
+      if (res.note) {
+        dispatch(setCurrentNote(res.note));
+        dispatch(updateNote(res.note));
+      }
+      toast.success('Note moved to trash');
+      navigate('/');
+    } catch (error) {
+      toast.error(error.message || 'Failed to move note to trash');
+    }
+  };
+
+  // Restore Note from Trash
+  const handleRestoreNote = async () => {
+    if (!currentNote) return;
+    try {
+      const restored = await notesAPI.restoreNote(currentNote._id);
+      dispatch(setCurrentNote(restored));
+      dispatch(updateNote(restored));
+      toast.success('Note restored!');
+    } catch (error) {
+      toast.error(error.message || 'Failed to restore note');
+    }
+  };
+
+  // Permanently Delete
+  const handlePermanentDelete = async () => {
+    if (!currentNote) return;
+    if (!window.confirm('Permanently delete this note? This action cannot be undone.')) {
+      return;
+    }
+    try {
+      await notesAPI.deleteNote(currentNote._id);
+      toast.success('Note permanently deleted');
+      navigate('/');
+    } catch (error) {
+      toast.error(error.message || 'Failed to delete note');
+    }
+  };
+
   // Markdown Formatting Helpers
   const insertFormatting = (prefix, suffix = '') => {
     if (!textareaRef.current || !canEdit) return;
@@ -319,14 +397,15 @@ const NoteEditor = () => {
 
       {/* Top Header Bar */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-4">
 
           {/* Left section: Back button & Title */}
-          <div className="flex items-center space-x-3 flex-1 min-w-0">
+          <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
             <button
               onClick={handleBack}
-              className="p-2 text-gray-500 hover:text-purple-700 hover:bg-purple-50 rounded-xl transition"
+              className="p-1.5 sm:p-2 text-gray-500 hover:text-purple-700 hover:bg-purple-50 rounded-xl transition flex-shrink-0"
               title="Back to Dashboard"
+              aria-label="Back to Dashboard"
             >
               <FaArrowLeft size={16} />
             </button>
@@ -338,13 +417,13 @@ const NoteEditor = () => {
                 onChange={handleTitleChange}
                 disabled={!canEdit}
                 placeholder="Untitled Note..."
-                className="w-full text-lg sm:text-xl font-black text-gray-900 bg-transparent border-b border-transparent focus:border-purple-500 focus:outline-none transition py-0.5 truncate"
+                className="w-full text-base sm:text-xl font-black text-gray-900 bg-transparent border-b border-transparent focus:border-purple-500 focus:outline-none transition py-0.5 truncate"
               />
             </div>
           </div>
 
-          {/* Right section: Presence, Status, Share & Actions */}
-          <div className="flex items-center space-x-2 sm:space-x-3">
+          {/* Right section: Desktop Actions & Mobile Quick Actions */}
+          <div className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
 
             {/* Real-time Room Active Presence Avatars */}
             {activeRoomUsers.length > 0 && (
@@ -361,7 +440,7 @@ const NoteEditor = () => {
               </div>
             )}
 
-            {/* Save status pill */}
+            {/* Save status pill (Desktop) */}
             <div className="hidden md:flex items-center space-x-1.5 text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full font-medium">
               {isSaving ? (
                 <>
@@ -381,8 +460,8 @@ const NoteEditor = () => {
               )}
             </div>
 
-            {/* Role Badge */}
-            <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${isOwner
+            {/* Role Badge (Desktop) */}
+            <span className={`hidden md:inline-flex px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${isOwner
               ? 'bg-indigo-100 text-indigo-900 border border-indigo-200'
               : canEdit
                 ? 'bg-purple-100 text-purple-900 border border-purple-200'
@@ -391,31 +470,70 @@ const NoteEditor = () => {
               {isOwner ? 'Owner' : canEdit ? 'Editor' : 'Viewer'}
             </span>
 
-            {/* Pin Toggle */}
-            <button
-              onClick={handleTogglePin}
-              className={`p-2 rounded-xl transition ${currentNote?.isPinned ? 'bg-purple-100 text-purple-700' : 'text-gray-400 hover:bg-gray-100'
-                }`}
-              title={currentNote?.isPinned ? 'Unpin note' : 'Pin note'}
-            >
-              <FaThumbtack size={14} />
-            </button>
+            {/* Pin Toggle (Desktop) */}
+            {!isTrashed && (
+              <button
+                onClick={handleTogglePin}
+                className={`hidden md:flex p-2 rounded-xl transition ${currentNote?.isPinned ? 'bg-purple-100 text-purple-700' : 'text-gray-400 hover:bg-gray-100'
+                  }`}
+                title={currentNote?.isPinned ? 'Unpin note' : 'Pin note'}
+              >
+                <FaThumbtack size={14} />
+              </button>
+            )}
 
-            {/* Version History Button */}
+            {/* Archive Toggle Button (Desktop) */}
+            {!isTrashed && (
+              <button
+                onClick={handleToggleArchive}
+                className={`hidden md:flex p-2 rounded-xl transition ${isArchived ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'text-gray-400 hover:bg-gray-100'}`}
+                title={isArchived ? 'Unarchive note' : 'Archive note'}
+              >
+                <FaArchive size={14} />
+              </button>
+            )}
+
+            {/* Move to Trash Button (Desktop) */}
+            {isOwner && !isTrashed && (
+              <button
+                onClick={handleMoveToTrash}
+                className="hidden md:flex p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition"
+                title="Move to Trash"
+              >
+                <FaTrash size={14} />
+              </button>
+            )}
+
+            {/* Version History Button (Desktop) */}
             <button
               onClick={() => setIsHistoryModalOpen(true)}
-              className="p-2 text-gray-600 hover:text-purple-700 hover:bg-purple-50 rounded-xl transition flex items-center space-x-1.5"
+              className="hidden md:flex p-2 text-gray-600 hover:text-purple-700 hover:bg-purple-50 rounded-xl transition items-center space-x-1.5"
               title="Version History"
             >
               <FaHistory size={14} />
               <span className="hidden lg:inline text-xs font-bold">History</span>
             </button>
 
-            {/* Reminder Button */}
+            {/* Comments Quick Access Button (Desktop) */}
+            <button
+              onClick={scrollToComments}
+              className="hidden md:flex px-2.5 py-1.5 rounded-xl text-xs font-bold text-gray-600 hover:text-purple-700 hover:bg-purple-50 transition items-center space-x-1.5"
+              title="Comments & Discussion"
+            >
+              <FaComments size={14} className="text-purple-600" />
+              <span className="hidden sm:inline">Comments</span>
+              {commentCount > 0 && (
+                <span className="px-1.5 py-0.5 bg-purple-100 text-purple-800 rounded-full text-[10px] font-extrabold">
+                  {commentCount}
+                </span>
+              )}
+            </button>
+
+            {/* Reminder Button (Desktop) */}
             {canEdit && (
               <button
                 onClick={() => setIsReminderModalOpen(true)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 ${reminder
+                className={`hidden md:flex px-3 py-1.5 rounded-xl text-xs font-bold transition items-center space-x-1.5 ${reminder
                   ? 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200'
                   : 'text-gray-600 hover:text-purple-700 hover:bg-purple-50'
                   }`}
@@ -438,7 +556,7 @@ const NoteEditor = () => {
                   toast.success('Note saved!');
                 }}
                 disabled={isSaving}
-                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow transition flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                className="px-2.5 sm:px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow transition flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
                 title="Save changes (Ctrl+S)"
               >
                 <FaSave size={12} />
@@ -447,10 +565,11 @@ const NoteEditor = () => {
             )}
 
             {/* Share Button (Only if owner) */}
-            {isOwner && (
+            {isOwner && !isTrashed && (
               <button
                 onClick={() => setIsShareModalOpen(true)}
-                className="px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-xl text-xs hover:brightness-110 shadow transition flex items-center space-x-1.5"
+                className="px-2.5 sm:px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-xl text-xs hover:brightness-110 shadow transition flex items-center space-x-1.5"
+                title="Share note"
               >
                 <FaShareAlt size={12} />
                 <span className="hidden sm:inline">Share</span>
@@ -459,7 +578,138 @@ const NoteEditor = () => {
 
           </div>
         </div>
+
+        {/* Mobile Action Strip (visible only on <md) */}
+        <div className="md:hidden bg-slate-50 border-t border-gray-100 px-3 py-1.5 flex items-center justify-between gap-1 overflow-x-auto">
+          <div className="flex items-center space-x-1.5 flex-shrink-0">
+            {/* Role Badge */}
+            <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider ${isOwner
+              ? 'bg-indigo-100 text-indigo-900 border border-indigo-200'
+              : canEdit
+                ? 'bg-purple-100 text-purple-900 border border-purple-200'
+                : 'bg-amber-100 text-amber-900 border border-amber-200'
+              }`}>
+              {isOwner ? 'Owner' : canEdit ? 'Editor' : 'Viewer'}
+            </span>
+
+            {/* Save Status indicator */}
+            <span className="text-[10px] text-gray-500 flex items-center space-x-1">
+              {isSaving ? (
+                <FaSync className="animate-spin text-purple-600" size={9} />
+              ) : !canEdit ? (
+                <FaLock className="text-amber-500" size={9} />
+              ) : (
+                <FaCheck className="text-green-500" size={9} />
+              )}
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-1 flex-shrink-0">
+            {/* Pin Toggle */}
+            {!isTrashed && (
+              <button
+                onClick={handleTogglePin}
+                className={`p-1.5 rounded-lg transition ${currentNote?.isPinned ? 'bg-purple-100 text-purple-700' : 'text-gray-400 hover:bg-gray-200/60'}`}
+                title={currentNote?.isPinned ? 'Unpin note' : 'Pin note'}
+                aria-label="Pin note"
+              >
+                <FaThumbtack size={12} />
+              </button>
+            )}
+
+            {/* Reminder Button */}
+            {canEdit && (
+              <button
+                onClick={() => setIsReminderModalOpen(true)}
+                className={`p-1.5 rounded-lg transition ${reminder ? 'bg-amber-100 text-amber-800' : 'text-gray-500 hover:bg-gray-200/60'}`}
+                title={reminder ? `Reminder set` : 'Set Reminder'}
+                aria-label="Set Reminder"
+              >
+                <FaClock size={12} className={reminder ? 'text-amber-600' : 'text-purple-600'} />
+              </button>
+            )}
+
+            {/* Comments Button */}
+            <button
+              onClick={scrollToComments}
+              className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-200/60 transition relative"
+              title="Comments"
+              aria-label="Comments"
+            >
+              <FaComments size={12} className="text-purple-600" />
+              {commentCount > 0 && (
+                <span className="absolute -top-1 -right-1 px-1 bg-purple-600 text-white rounded-full text-[8px] font-bold">
+                  {commentCount}
+                </span>
+              )}
+            </button>
+
+            {/* Version History Button */}
+            <button
+              onClick={() => setIsHistoryModalOpen(true)}
+              className="p-1.5 text-gray-500 hover:bg-gray-200/60 rounded-lg transition"
+              title="Version History"
+              aria-label="Version History"
+            >
+              <FaHistory size={12} />
+            </button>
+
+            {/* Archive Button */}
+            {!isTrashed && (
+              <button
+                onClick={handleToggleArchive}
+                className={`p-1.5 rounded-lg transition ${isArchived ? 'bg-amber-100 text-amber-800' : 'text-gray-500 hover:bg-gray-200/60'}`}
+                title={isArchived ? 'Unarchive note' : 'Archive note'}
+                aria-label="Archive note"
+              >
+                <FaArchive size={12} />
+              </button>
+            )}
+
+            {/* Move to Trash Button */}
+            {isOwner && !isTrashed && (
+              <button
+                onClick={handleMoveToTrash}
+                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                title="Move to Trash"
+                aria-label="Move to Trash"
+              >
+                <FaTrash size={12} />
+              </button>
+            )}
+          </div>
+        </div>
       </header>
+
+      {/* Trashed Notice Banner */}
+      {isTrashed && (
+        <div className="bg-red-50 border-b border-red-200 px-4 py-3">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-red-800 text-xs font-medium">
+            <div className="flex items-center space-x-2">
+              <FaTrash className="text-red-500" size={14} />
+              <span>This note is in <strong>Trash</strong>. Restore it to edit or view active options.</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleRestoreNote}
+                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow-sm transition flex items-center space-x-1.5"
+              >
+                <FaUndo size={11} />
+                <span>Restore Note</span>
+              </button>
+              {isOwner && (
+                <button
+                  onClick={handlePermanentDelete}
+                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-sm transition flex items-center space-x-1.5"
+                >
+                  <FaTrash size={11} />
+                  <span>Delete Permanently</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tags & Controls Toolbar */}
       <div className="bg-white border-b border-gray-100 py-2.5 px-4">
@@ -617,31 +867,31 @@ const NoteEditor = () => {
       </div>
 
       {/* Main Canvas Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col">
-        <div className="flex-1 bg-white rounded-3xl shadow-lg border border-gray-200 overflow-hidden flex flex-col md:flex-row min-h-[500px]">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 flex flex-col min-w-0">
+        <div className="flex-1 bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-gray-200 overflow-hidden flex flex-col md:flex-row min-h-[420px] sm:min-h-[500px]">
 
           {/* Editor Area */}
           {(viewMode === 'edit' || viewMode === 'split') && (
-            <div className={`p-6 flex flex-col flex-1 ${viewMode === 'split' ? 'border-r border-gray-200' : ''}`}>
+            <div className={`p-4 sm:p-6 flex flex-col flex-1 ${viewMode === 'split' ? 'border-r border-gray-200' : ''}`}>
               <textarea
                 ref={textareaRef}
                 value={content}
                 onChange={handleContentChange}
                 disabled={!canEdit}
                 placeholder={canEdit ? 'Write your note content here using Markdown formatting...' : 'Read-only note content...'}
-                className="w-full flex-1 bg-transparent resize-none focus:outline-none text-gray-800 text-base sm:text-lg leading-relaxed font-sans"
+                className="w-full flex-1 bg-transparent resize-none focus:outline-none text-gray-800 text-base sm:text-lg leading-relaxed font-sans min-h-[300px]"
               />
             </div>
           )}
 
           {/* Markdown Preview Area */}
           {(viewMode === 'preview' || viewMode === 'split') && (
-            <div className="p-6 flex-1 bg-slate-50/50 overflow-y-auto prose max-w-none">
-              <h2 className="text-xl font-bold text-gray-900 mb-4 pb-2 border-b">
+            <div className="p-4 sm:p-6 flex-1 bg-slate-50/50 overflow-y-auto prose max-w-none">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 pb-2 border-b">
                 {title || 'Untitled Note'}
               </h2>
               {content ? (
-                <div className="whitespace-pre-wrap text-gray-800 leading-relaxed font-sans">
+                <div className="whitespace-pre-wrap text-gray-800 leading-relaxed font-sans text-sm sm:text-base">
                   {content}
                 </div>
               ) : (
@@ -653,14 +903,34 @@ const NoteEditor = () => {
         </div>
 
         {/* Footer Statistics */}
-        <div className="mt-4 flex items-center justify-between text-xs text-gray-400 px-2 font-medium">
-          <div className="flex items-center space-x-4">
+        <div className="mt-3 sm:mt-4 flex flex-wrap items-center justify-between text-[11px] sm:text-xs text-gray-400 px-2 font-medium gap-2">
+          <div className="flex items-center space-x-3 sm:space-x-4">
             <span>{wordCount} words</span>
             <span>{charCount} characters</span>
           </div>
           {lastSavedTime && (
             <span>Last saved at {lastSavedTime.toLocaleTimeString()}</span>
           )}
+        </div>
+
+        {/* Attachments Section */}
+        <AttachmentsSection
+          noteId={id}
+          isOwner={isOwner}
+          userPermission={userPermission}
+          isTrashed={isTrashed}
+        />
+
+        {/* Comments & Discussion Thread Section */}
+        <div ref={commentsSectionRef} className="mt-2">
+          <CommentsSection
+            noteId={id}
+            isOwner={isOwner}
+            userPermission={userPermission}
+            isTrashed={isTrashed}
+            currentUser={user}
+            onCommentCountChange={(cnt) => setCommentCount(cnt)}
+          />
         </div>
       </main>
 

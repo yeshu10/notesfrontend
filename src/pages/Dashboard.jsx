@@ -178,6 +178,7 @@ const Dashboard = () => {
                   <button
                     onClick={() => dispatch(setSelectedTag(''))}
                     className="hover:text-purple-950 p-0.5"
+                    aria-label="Remove tag filter"
                   >
                     <FaTimes size={10} />
                   </button>
@@ -188,18 +189,18 @@ const Dashboard = () => {
               {searchQuery && (
                 <div className="flex items-center space-x-1.5 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs font-bold border border-indigo-200">
                   <FaSearch size={10} />
-                  <span>"{searchQuery}"</span>
+                  <span className="truncate max-w-[150px]">"{searchQuery}"</span>
                 </div>
               )}
 
               {/* Sorting Dropdown */}
-              <div className="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm text-xs font-semibold text-gray-700">
-                <FaSortAmountDown className="text-purple-600" />
+              <div className="flex items-center space-x-1.5 bg-white px-2.5 sm:px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm text-xs font-semibold text-gray-700">
+                <FaSortAmountDown className="text-purple-600 flex-shrink-0" />
                 <span>Sort:</span>
                 <select
                   value={sortBy}
                   onChange={(e) => dispatch(setSortBy(e.target.value))}
-                  className="bg-transparent focus:outline-none font-bold text-gray-800 cursor-pointer"
+                  className="bg-transparent focus:outline-none font-bold text-gray-800 cursor-pointer text-xs"
                 >
                   <option value="updated">Recently Updated</option>
                   <option value="created">Recently Created</option>
@@ -211,7 +212,7 @@ const Dashboard = () => {
               {/* Floating Quick Add Note Button */}
               <button
                 onClick={handleCreateNote}
-                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:brightness-110 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center space-x-1.5"
+                className="px-3.5 sm:px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:brightness-110 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center space-x-1.5 flex-shrink-0"
               >
                 <FaPlus size={12} />
                 <span>Add Note</span>
@@ -235,7 +236,7 @@ const Dashboard = () => {
             </div>
           ) : notes.length === 0 ? (
             /* Empty State Illustration */
-            <div className="py-16 text-center bg-white rounded-3xl border border-dashed border-gray-200 p-8 max-w-md mx-auto shadow-sm my-6">
+            <div className="py-12 sm:py-16 text-center bg-white rounded-3xl border border-dashed border-gray-200 p-6 sm:p-8 max-w-md mx-auto shadow-sm my-6">
               <div className="w-16 h-16 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mx-auto mb-4 text-2xl shadow-inner">
                 <FaFolderOpen />
               </div>
@@ -277,8 +278,8 @@ const Dashboard = () => {
 
           {/* Pagination Controls */}
           {pagination && pagination.totalPages > 1 && (
-            <div className="mt-8 flex items-center justify-between border-t border-gray-200 pt-4 text-xs font-semibold text-gray-600">
-              <p>
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-200 pt-4 text-xs font-semibold text-gray-600">
+              <p className="text-center sm:text-left">
                 Showing Page <span className="font-bold text-purple-700">{pagination.currentPage}</span> of{' '}
                 <span className="font-bold">{pagination.totalPages}</span>
               </p>
@@ -286,7 +287,7 @@ const Dashboard = () => {
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                   disabled={!pagination.hasPrevPage}
-                  className="px-3.5 py-1.5 bg-white border rounded-xl hover:bg-gray-50 disabled:opacity-40 font-bold shadow-sm flex items-center space-x-1"
+                  className="px-3.5 py-1.5 bg-white border rounded-xl hover:bg-gray-50 disabled:opacity-40 font-bold shadow-sm flex items-center space-x-1 min-h-[36px]"
                 >
                   <FaArrowLeft size={10} />
                   <span>Previous</span>
@@ -294,7 +295,7 @@ const Dashboard = () => {
                 <button
                   onClick={() => setCurrentPage((p) => p + 1)}
                   disabled={!pagination.hasNextPage}
-                  className="px-3.5 py-1.5 bg-white border rounded-xl hover:bg-gray-50 disabled:opacity-40 font-bold shadow-sm flex items-center space-x-1"
+                  className="px-3.5 py-1.5 bg-white border rounded-xl hover:bg-gray-50 disabled:opacity-40 font-bold shadow-sm flex items-center space-x-1 min-h-[36px]"
                 >
                   <span>Next</span>
                   <FaArrowRight size={10} />

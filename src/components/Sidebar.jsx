@@ -68,7 +68,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen, onRefreshNotes }) => {
     };
 
     const content = (
-        <div className="h-full flex flex-col justify-between p-4 bg-white/95 backdrop-blur-md border-r border-purple-100 w-64 shadow-sm">
+        <div className="h-full flex flex-col justify-between p-4 bg-white/95 backdrop-blur-md border-r border-purple-100 w-full lg:w-64 shadow-sm">
             <div className="space-y-6 overflow-y-auto">
                 {/* Navigation Categories */}
                 <div>
@@ -162,12 +162,6 @@ const Sidebar = ({ mobileOpen, setMobileOpen, onRefreshNotes }) => {
                     </button>
                 </div>
             )}
-
-            {/* Tag Manager Modal */}
-            <TagManagerModal
-                isOpen={isTagModalOpen}
-                onClose={() => setIsTagModalOpen(false)}
-            />
         </div>
     );
 
@@ -185,12 +179,13 @@ const Sidebar = ({ mobileOpen, setMobileOpen, onRefreshNotes }) => {
                         className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
                         onClick={() => setMobileOpen(false)}
                     />
-                    <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-2xl z-50 flex flex-col">
+                    <div className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-white shadow-2xl z-50 flex flex-col">
                         <div className="p-4 border-b flex justify-between items-center bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-white">
                             <h2 className="font-bold text-lg">Menu</h2>
                             <button
                                 onClick={() => setMobileOpen(false)}
-                                className="p-1 rounded hover:bg-white/20 text-white"
+                                className="p-1.5 rounded-lg hover:bg-white/20 text-white transition"
+                                aria-label="Close menu"
                             >
                                 <FaTimes size={18} />
                             </button>
@@ -199,6 +194,12 @@ const Sidebar = ({ mobileOpen, setMobileOpen, onRefreshNotes }) => {
                     </div>
                 </div>
             )}
+
+            {/* Tag Manager Modal */}
+            <TagManagerModal
+                isOpen={isTagModalOpen}
+                onClose={() => setIsTagModalOpen(false)}
+            />
         </>
     );
 };

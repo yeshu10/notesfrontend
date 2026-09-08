@@ -102,10 +102,10 @@ const ReminderModal = ({ noteId, noteTitle, isOpen, onClose, onReminderUpdated, 
     const todayStr = new Date().toISOString().split('T')[0];
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-            <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm">
+            <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-y-auto max-h-[90vh] border border-gray-100 animate-in fade-in zoom-in duration-200">
                 {/* Header */}
-                <div className="px-6 py-5 bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 text-white flex items-center justify-between">
+                <div className="px-4 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 text-white flex items-center justify-between">
                     <div className="flex items-center space-x-2.5">
                         <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
                             <FaClock className="text-white" size={18} />
@@ -114,7 +114,7 @@ const ReminderModal = ({ noteId, noteTitle, isOpen, onClose, onReminderUpdated, 
                             <h3 className="font-extrabold text-base tracking-tight">
                                 {currentReminder ? 'Edit Reminder' : 'Set Reminder'}
                             </h3>
-                            <p className="text-xs text-white/80 line-clamp-1 font-medium max-w-[220px]">
+                            <p className="text-xs text-white/80 line-clamp-1 font-medium max-w-[200px] sm:max-w-[220px]">
                                 {noteTitle || 'Untitled Note'}
                             </p>
                         </div>
@@ -122,13 +122,14 @@ const ReminderModal = ({ noteId, noteTitle, isOpen, onClose, onReminderUpdated, 
                     <button
                         onClick={onClose}
                         className="p-2 rounded-full hover:bg-white/20 text-white transition"
+                        aria-label="Close modal"
                     >
                         <FaTimes size={16} />
                     </button>
                 </div>
 
                 {/* Form Body */}
-                <form onSubmit={handleSave} className="p-6 space-y-5">
+                <form onSubmit={handleSave} className="p-4 sm:p-6 space-y-4 sm:space-y-5">
                     {/* Date Field */}
                     <div>
                         <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
@@ -162,13 +163,13 @@ const ReminderModal = ({ noteId, noteTitle, isOpen, onClose, onReminderUpdated, 
 
                     {/* Scheduled Preview Box */}
                     {previewString && (
-                        <div className="p-4 bg-amber-50/80 border border-amber-200/80 rounded-2xl flex items-center space-x-3">
+                        <div className="p-3.5 sm:p-4 bg-amber-50/80 border border-amber-200/80 rounded-2xl flex items-center space-x-3">
                             <FaCalendarAlt className="text-amber-600 flex-shrink-0" size={16} />
-                            <div>
+                            <div className="min-w-0">
                                 <p className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">
                                     Reminder Scheduled For:
                                 </p>
-                                <p className="text-xs font-extrabold text-amber-950 mt-0.5">
+                                <p className="text-xs font-extrabold text-amber-950 mt-0.5 truncate">
                                     ⏰ {previewString}
                                 </p>
                             </div>
@@ -176,33 +177,33 @@ const ReminderModal = ({ noteId, noteTitle, isOpen, onClose, onReminderUpdated, 
                     )}
 
                     {/* Modal Footer Actions */}
-                    <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-3">
+                    <div className="pt-3 border-t border-gray-100 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2.5">
                         {currentReminder ? (
                             <button
                                 type="button"
                                 onClick={handleRemove}
                                 disabled={isDeleting || isSaving}
-                                className="px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl text-xs transition flex items-center space-x-1.5 disabled:opacity-50"
+                                className="px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 disabled:opacity-50"
                             >
                                 <FaTrash size={12} />
                                 <span>{isDeleting ? 'Removing...' : 'Remove'}</span>
                             </button>
                         ) : (
-                            <div />
+                            <div className="hidden sm:block" />
                         )}
 
                         <div className="flex items-center space-x-2">
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-xs transition"
+                                className="flex-1 sm:flex-initial px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-xs transition text-center"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 disabled={isSaving || isDeleting}
-                                className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:brightness-110 text-white font-bold rounded-xl text-xs shadow-md transition flex items-center space-x-1.5 disabled:opacity-50"
+                                className="flex-1 sm:flex-initial px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:brightness-110 text-white font-bold rounded-xl text-xs shadow-md transition flex items-center justify-center space-x-1.5 disabled:opacity-50"
                             >
                                 <FaCheck size={12} />
                                 <span>{isSaving ? 'Saving...' : 'Save Reminder'}</span>

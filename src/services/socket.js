@@ -10,6 +10,11 @@ const backendURL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 let socket = null;
 let currentNoteId = null;
 const noteUpdateListeners = new Set();
+const commentAddedListeners = new Set();
+const commentUpdatedListeners = new Set();
+const commentDeletedListeners = new Set();
+const attachmentAddedListeners = new Set();
+const attachmentDeletedListeners = new Set();
 
 const playNotificationSound = () => {
   try {
@@ -108,8 +113,38 @@ export const initializeSocket = (token) => {
     store.dispatch(addNotification(data));
     playNotificationSound();
     toast(data.message, {
-      icon: data.type === 'REMINDER' ? '⏰' : '🔔',
+      icon: data.type === 'REMINDER' ? '⏰' : data.type === 'NOTE_COMMENT' || data.type === 'COMMENT_REPLY' ? '💬' : '🔔',
       duration: 6000
+    });
+  });
+
+  socket.on('comment-added', (data) => {
+    commentAddedListeners.forEach((listener) => {
+      try { listener(data); } catch (e) { console.error('Error in commentAddedListener:', e); }
+    });
+  });
+
+  socket.on('comment-updated', (data) => {
+    commentUpdatedListeners.forEach((listener) => {
+      try { listener(data); } catch (e) { console.error('Error in commentUpdatedListener:', e); }
+    });
+  });
+
+  socket.on('comment-deleted', (data) => {
+    commentDeletedListeners.forEach((listener) => {
+      try { listener(data); } catch (e) { console.error('Error in commentDeletedListener:', e); }
+    });
+  });
+
+  socket.on('attachment-added', (data) => {
+    attachmentAddedListeners.forEach((listener) => {
+      try { listener(data); } catch (e) { console.error('Error in attachmentAddedListener:', e); }
+    });
+  });
+
+  socket.on('attachment-deleted', (data) => {
+    attachmentDeletedListeners.forEach((listener) => {
+      try { listener(data); } catch (e) { console.error('Error in attachmentDeletedListener:', e); }
     });
   });
 
@@ -120,6 +155,28 @@ export const subscribeToNoteUpdates = (listener) => {
   noteUpdateListeners.add(listener);
   return () => {
     noteUpdateListeners.delete(listener);
+  };
+};
+
+export const subscribeToComments = ({ onAdded, onUpdated, onDeleted }) => {
+  if (onAdded) commentAddedListeners.add(onAdded);
+  if (onUpdated) commentUpdatedListeners.add(onUpdated);
+  if (onDeleted) commentDeletedListeners.add(onDeleted);
+
+  return () => {
+    if (onAdded) commentAddedListeners.delete(onAdded);
+    if (onUpdated) commentUpdatedListeners.delete(onUpdated);
+    if (onDeleted) commentDeletedListeners.delete(onDeleted);
+  };
+};
+
+export const subscribeToAttachments = ({ onAdded, onDeleted }) => {
+  if (onAdded) attachmentAddedListeners.add(onAdded);
+  if (onDeleted) attachmentDeletedListeners.add(onDeleted);
+
+  return () => {
+    if (onAdded) attachmentAddedListeners.delete(onAdded);
+    if (onDeleted) attachmentDeletedListeners.delete(onDeleted);
   };
 };
 

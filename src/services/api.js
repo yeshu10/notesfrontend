@@ -117,7 +117,9 @@ export const notesAPI = {
       if (typeof titleData === 'object') {
         body = {
           title: (titleData.title || 'Untitled Note').trim(),
+          type: titleData.type || 'text',
           content: (titleData.content || '').trim(),
+          checklistItems: titleData.checklistItems || [],
           tags: titleData.tags || [],
           color: titleData.color || 'default',
           isPinned: !!titleData.isPinned
@@ -125,7 +127,8 @@ export const notesAPI = {
       } else {
         body = {
           title: (titleData || 'Untitled Note').trim(),
-          content: (contentArg || '').trim()
+          content: (contentArg || '').trim(),
+          type: 'text'
         };
       }
 
@@ -163,6 +166,26 @@ export const notesAPI = {
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Failed to restore note');
+    }
+  },
+
+  archiveNote: async (id) => {
+    try {
+      const noteId = extractId(id);
+      const response = await api.patch(`/notes/${noteId}/archive`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to archive note');
+    }
+  },
+
+  unarchiveNote: async (id) => {
+    try {
+      const noteId = extractId(id);
+      const response = await api.patch(`/notes/${noteId}/unarchive`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to unarchive note');
     }
   },
 
@@ -249,6 +272,52 @@ export const notesAPI = {
   }
 };
 
+export const commentsAPI = {
+  getComments: async (noteId) => {
+    try {
+      const id = extractId(noteId);
+      const response = await api.get(`/notes/${id}/comments`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch comments');
+    }
+  },
+
+  addComment: async (noteId, content, parentCommentId = null) => {
+    try {
+      const id = extractId(noteId);
+      const body = { content };
+      if (parentCommentId) body.parentCommentId = extractId(parentCommentId);
+      const response = await api.post(`/notes/${id}/comments`, body);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to add comment');
+    }
+  },
+
+  updateComment: async (commentId, content, noteId = null) => {
+    try {
+      const id = extractId(commentId);
+      const endpoint = noteId ? `/notes/${extractId(noteId)}/comments/${id}` : `/comments/${id}`;
+      const response = await api.patch(endpoint, { content });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to update comment');
+    }
+  },
+
+  deleteComment: async (commentId, noteId = null) => {
+    try {
+      const id = extractId(commentId);
+      const endpoint = noteId ? `/notes/${extractId(noteId)}/comments/${id}` : `/comments/${id}`;
+      const response = await api.delete(endpoint);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to delete comment');
+    }
+  }
+};
+
 export const remindersAPI = {
   setReminder: async (noteId, date, time, reminderAt) => {
     try {
@@ -282,6 +351,82 @@ export const remindersAPI = {
       throw new Error(error.response?.data?.message || 'Failed to remove reminder');
     }
   }
+};
+
+export const attachmentsAPI = {
+  /**
+   * Fetch all attachments for a note.
+   */
+  getAttachments: async (noteId) => {
+    try {
+      const id = extractId(noteId);
+      const response = await api.get(`/notes/${id}/attachments`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch attachments');
+    }
+  },
+
+  /**
+   * Upload a single file attachment to a note.
+   * @param {string} noteId
+   * @param {File} file  — the File object from an <input type="file">
+   * @param {(percent: number) => void} [onUploadProgress]
+   */
+  uploadAttachment: async (noteId, file, onUploadProgress) => {
+    try {
+      const id = extractId(noteId);
+      const formData = new FormData();
+      formData.append('file', file);
+      // Do NOT set Content-Type manually — axios auto-sets
+      // 'multipart/form-data; boundary=...' when the body is FormData.
+      // Overriding it strips the boundary and breaks multer parsing.
+      const response = await api.post(`/notes/${id}/attachments`, formData, {
+        onUploadProgress: onUploadProgress
+          ? (progressEvent) => {
+              if (progressEvent.total) {
+                const percent = Math.round(
+                  (progressEvent.loaded * 100) / progressEvent.total
+                );
+                onUploadProgress(percent);
+              }
+            }
+          : undefined,
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Upload failed');
+    }
+  },
+
+  /**
+   * Delete an attachment (removes GridFS file + metadata).
+   */
+  deleteAttachment: async (attachmentId) => {
+    try {
+      const id = extractId(attachmentId);
+      const response = await api.delete(`/attachments/${id}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to delete attachment');
+    }
+  },
+
+  /**
+   * Fetch an attachment file as a Blob (authenticated).
+   * Use URL.createObjectURL(blob) for images or to trigger downloads.
+   */
+  fetchAttachmentBlob: async (attachmentId) => {
+    try {
+      const id = extractId(attachmentId);
+      const response = await api.get(`/attachments/${id}/file`, {
+        responseType: 'blob',
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch file');
+    }
+  },
 };
 
 export default api;

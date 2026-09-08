@@ -48,6 +48,10 @@ const NotificationCenter = () => {
             case 'restored':
             case 'NOTE_RESTORED':
                 return '🔄';
+            case 'NOTE_COMMENT':
+                return '💬';
+            case 'COMMENT_REPLY':
+                return '↩️';
             case 'update':
             case 'NOTE_EDITED':
             default:
@@ -76,7 +80,7 @@ const NotificationCenter = () => {
                         className="fixed inset-0 z-30"
                         onClick={() => setIsOpen(false)}
                     />
-                    <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-purple-100 z-40 overflow-hidden text-gray-800 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="fixed sm:absolute left-3 right-3 sm:left-auto sm:right-0 top-16 sm:top-auto sm:mt-2 sm:w-96 max-w-sm bg-white rounded-2xl shadow-2xl border border-purple-100 z-40 overflow-hidden text-gray-800 animate-in fade-in slide-in-from-top-2 duration-200">
                         {/* Header */}
                         <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-purple-100">
                             <div className="flex items-center space-x-2 font-bold text-indigo-900 text-sm">
