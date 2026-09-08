@@ -123,7 +123,7 @@ const NoteCard = ({ note, onShareClick }) => {
     return (
         <div
             onClick={() => navigate(`/notes/${note._id}`)}
-            className={`group relative flex flex-col justify-between p-4 sm:p-5 bg-white rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer overflow-hidden ${note.isPinned ? 'border-purple-300 ring-2 ring-purple-100 shadow-md' : 'border-gray-100 shadow-sm hover:border-purple-200'
+            className={`group relative flex flex-col justify-between p-4 sm:p-5 bg-white rounded-2xl border transition-all duration-200 hover:shadow-xl hover:shadow-purple-500/5 hover:-translate-y-1 cursor-pointer overflow-hidden ${note.isPinned ? 'border-purple-300 ring-2 ring-purple-100 shadow-md' : 'border-slate-200/80 shadow-xs hover:border-purple-300'
                 }`}
         >
             {/* Top Accent Line */}
@@ -133,7 +133,7 @@ const NoteCard = ({ note, onShareClick }) => {
                     ? 'bg-gradient-to-r from-amber-400 to-purple-500'
                     : note.isPinned
                         ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-500'
-                        : 'bg-gradient-to-r from-gray-200 to-purple-200 group-hover:from-indigo-400 group-hover:to-pink-400'
+                        : 'bg-gradient-to-r from-slate-200 to-purple-200 group-hover:from-indigo-400 group-hover:to-pink-400'
                 }`} />
 
             <div>
@@ -142,10 +142,10 @@ const NoteCard = ({ note, onShareClick }) => {
                     <div className="flex items-center space-x-1.5 flex-wrap">
                         {/* Permission / Role pill */}
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide flex items-center space-x-1 ${isOwner
-                            ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                            ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/70'
                             : userPermission === 'editor'
-                                ? 'bg-purple-100 text-purple-800 border border-purple-200'
-                                : 'bg-gray-100 text-gray-700 border border-gray-200'
+                                ? 'bg-purple-50 text-purple-700 border border-purple-200/70'
+                                : 'bg-slate-100 text-slate-700 border border-slate-200/70'
                             }`}>
                             {isOwner ? <FaPencilAlt size={8} /> : userPermission === 'editor' ? <FaEdit size={8} /> : <FaEye size={8} />}
                             <span>{isOwner ? 'Owner' : userPermission === 'editor' ? 'Editor' : 'Viewer'}</span>
@@ -198,7 +198,7 @@ const NoteCard = ({ note, onShareClick }) => {
                 )}
 
                 {/* Note Title */}
-                <h3 className="text-base font-bold text-gray-800 line-clamp-1 mb-1.5 group-hover:text-purple-700 transition">
+                <h3 className="text-base font-bold text-slate-900 line-clamp-1 mb-1.5 group-hover:text-purple-600 transition">
                     {note.title || 'Untitled Note'}
                 </h3>
 
@@ -206,21 +206,21 @@ const NoteCard = ({ note, onShareClick }) => {
                 {note.type === 'checklist' && Array.isArray(note.checklistItems) && note.checklistItems.length > 0 ? (
                     <div className="mb-4 space-y-1">
                         {note.checklistItems.slice(0, 3).map((item, idx) => (
-                            <div key={item.id || idx} className="flex items-center space-x-1.5 text-xs text-gray-600">
-                                <span className={item.completed ? 'text-green-500 flex-shrink-0' : 'text-gray-400 flex-shrink-0'}>
+                            <div key={item.id || idx} className="flex items-center space-x-1.5 text-xs text-slate-600">
+                                <span className={item.completed ? 'text-emerald-500 flex-shrink-0' : 'text-slate-300 flex-shrink-0'}>
                                     {item.completed ? '☑' : '☐'}
                                 </span>
-                                <span className={`line-clamp-1 ${item.completed ? 'line-through text-gray-400' : ''}`}>
+                                <span className={`line-clamp-1 ${item.completed ? 'line-through text-slate-400' : ''}`}>
                                     {item.text || '(empty item)'}
                                 </span>
                             </div>
                         ))}
                         {note.checklistItems.length > 3 && (
-                            <span className="text-[10px] text-gray-400 font-medium">+{note.checklistItems.length - 3} more items</span>
+                            <span className="text-[10px] text-slate-400 font-medium">+{note.checklistItems.length - 3} more items</span>
                         )}
                     </div>
                 ) : (
-                    <p className="text-xs text-gray-600 line-clamp-3 mb-4 leading-relaxed font-normal">
+                    <p className="text-xs text-slate-500 line-clamp-3 mb-4 leading-relaxed font-normal">
                         {note.content ? note.content.replace(/[#*`]/g, '') : 'No additional text in note...'}
                     </p>
                 )}
@@ -228,7 +228,7 @@ const NoteCard = ({ note, onShareClick }) => {
                 {/* Checklist type indicator pill */}
                 {note.type === 'checklist' && (
                     <div className="flex items-center space-x-1 mb-3">
-                        <span className="flex items-center space-x-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-md border border-emerald-100">
+                        <span className="flex items-center space-x-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-md border border-emerald-200/70">
                             <FaListUl size={8} />
                             <span>
                                 {Array.isArray(note.checklistItems)
@@ -246,7 +246,7 @@ const NoteCard = ({ note, onShareClick }) => {
                             <button
                                 key={tag}
                                 onClick={(e) => handleTagClick(e, tag)}
-                                className="px-2 py-0.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-[10px] font-semibold rounded-md border border-purple-100 transition flex items-center space-x-1"
+                                className="px-2 py-0.5 bg-slate-100/80 hover:bg-purple-50 text-slate-600 hover:text-purple-700 text-[10px] font-semibold rounded-md border border-slate-200/60 hover:border-purple-200 transition flex items-center space-x-1"
                             >
                                 <FaTag size={8} />
                                 <span>{tag}</span>
@@ -257,7 +257,7 @@ const NoteCard = ({ note, onShareClick }) => {
             </div>
 
             {/* Footer Info & Action Bar */}
-            <div className="pt-3 border-t border-gray-100 flex items-center justify-between text-gray-400 text-[11px] gap-2 flex-wrap">
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-slate-400 text-[11px] gap-2 flex-wrap">
                 {/* Date, Collaborators count & Comment count */}
                 <div className="flex items-center space-x-2 min-w-0">
                     <span className="truncate">{new Date(note.lastUpdated || note.updatedAt || Date.now()).toLocaleDateString()}</span>

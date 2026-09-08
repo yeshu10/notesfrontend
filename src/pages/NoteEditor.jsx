@@ -868,18 +868,18 @@ const NoteEditor = () => {
 
       {/* Main Canvas Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 flex flex-col min-w-0">
-        <div className="flex-1 bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-gray-200 overflow-hidden flex flex-col md:flex-row min-h-[420px] sm:min-h-[500px]">
+        <div className="flex-1 bg-white rounded-2xl sm:rounded-3xl shadow-xs border border-slate-200/80 overflow-hidden flex flex-col md:flex-row min-h-[420px] sm:min-h-[500px]">
 
           {/* Editor Area */}
           {(viewMode === 'edit' || viewMode === 'split') && (
-            <div className={`p-4 sm:p-6 flex flex-col flex-1 ${viewMode === 'split' ? 'border-r border-gray-200' : ''}`}>
+            <div className={`p-4 sm:p-6 flex flex-col flex-1 ${viewMode === 'split' ? 'border-r border-slate-200' : ''}`}>
               <textarea
                 ref={textareaRef}
                 value={content}
                 onChange={handleContentChange}
                 disabled={!canEdit}
                 placeholder={canEdit ? 'Write your note content here using Markdown formatting...' : 'Read-only note content...'}
-                className="w-full flex-1 bg-transparent resize-none focus:outline-none text-gray-800 text-base sm:text-lg leading-relaxed font-sans min-h-[300px]"
+                className="w-full flex-1 bg-transparent resize-none focus:outline-none text-slate-800 placeholder-slate-400 text-base sm:text-lg leading-relaxed font-sans min-h-[300px]"
               />
             </div>
           )}

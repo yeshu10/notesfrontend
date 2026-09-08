@@ -318,13 +318,13 @@ const AttachmentsSection = ({ noteId, userPermission, isOwner, isTrashed }) => {
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="bg-white rounded-3xl shadow-lg border border-gray-200 overflow-hidden mt-4">
+    <div className="bg-white rounded-3xl shadow-xs border border-slate-200/80 overflow-hidden mt-4">
 
       {/* ── Section header ─────────────────────────────────────────────────── */}
-      <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <FaPaperclip className="text-purple-600" size={13} />
-          <h3 className="text-xs sm:text-sm font-extrabold text-gray-800 uppercase tracking-wider">
+          <h3 className="text-xs sm:text-sm font-extrabold text-slate-800 uppercase tracking-wider">
             Attachments
           </h3>
           {attachments.length > 0 && (

@@ -154,16 +154,16 @@ const Dashboard = () => {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
               <div className="flex items-center space-x-3">
-                <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
                   {getHeaderTitle()}
                 </h1>
                 {pagination?.totalNotes !== undefined && (
-                  <span className="px-2.5 py-0.5 bg-purple-100 text-purple-800 rounded-full text-xs font-bold">
-                    {pagination.totalNotes}
+                  <span className="px-2.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-200/70 rounded-full text-xs font-extrabold">
+                    {pagination.totalNotes} {pagination.totalNotes === 1 ? 'note' : 'notes'}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-slate-400 mt-1">
                 Real-time collaborative workspace notes
               </p>
             </div>
@@ -172,12 +172,12 @@ const Dashboard = () => {
             <div className="flex flex-wrap items-center gap-2">
               {/* Selected Tag Pill */}
               {selectedTag && (
-                <div className="flex items-center space-x-1.5 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-bold border border-purple-200">
+                <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-xs font-bold border border-purple-200 shadow-2xs">
                   <FaTag size={10} />
                   <span>#{selectedTag}</span>
                   <button
                     onClick={() => dispatch(setSelectedTag(''))}
-                    className="hover:text-purple-950 p-0.5"
+                    className="hover:text-purple-950 p-0.5 cursor-pointer"
                     aria-label="Remove tag filter"
                   >
                     <FaTimes size={10} />
@@ -187,20 +187,20 @@ const Dashboard = () => {
 
               {/* Active Search Pill */}
               {searchQuery && (
-                <div className="flex items-center space-x-1.5 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs font-bold border border-indigo-200">
+                <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold border border-indigo-200 shadow-2xs">
                   <FaSearch size={10} />
                   <span className="truncate max-w-[150px]">"{searchQuery}"</span>
                 </div>
               )}
 
               {/* Sorting Dropdown */}
-              <div className="flex items-center space-x-1.5 bg-white px-2.5 sm:px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm text-xs font-semibold text-gray-700">
+              <div className="flex items-center space-x-1.5 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-xs text-xs font-semibold text-slate-700">
                 <FaSortAmountDown className="text-purple-600 flex-shrink-0" />
-                <span>Sort:</span>
+                <span className="text-slate-500 font-medium">Sort:</span>
                 <select
                   value={sortBy}
                   onChange={(e) => dispatch(setSortBy(e.target.value))}
-                  className="bg-transparent focus:outline-none font-bold text-gray-800 cursor-pointer text-xs"
+                  className="bg-transparent focus:outline-none font-bold text-slate-800 cursor-pointer text-xs"
                 >
                   <option value="updated">Recently Updated</option>
                   <option value="created">Recently Created</option>
@@ -212,9 +212,9 @@ const Dashboard = () => {
               {/* Floating Quick Add Note Button */}
               <button
                 onClick={handleCreateNote}
-                className="px-3.5 sm:px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:brightness-110 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center space-x-1.5 flex-shrink-0"
+                className="px-4 py-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:brightness-105 active:scale-[0.98] text-white text-xs font-bold rounded-xl shadow-md shadow-purple-500/20 transition flex items-center space-x-1.5 flex-shrink-0 cursor-pointer"
               >
-                <FaPlus size={12} />
+                <FaPlus size={11} />
                 <span>Add Note</span>
               </button>
             </div>
@@ -224,28 +224,36 @@ const Dashboard = () => {
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="h-44 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 animate-pulse flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <div className="h-4 bg-gray-200 rounded-full w-3/4" />
-                    <div className="h-3 bg-gray-150 rounded-full w-full" />
-                    <div className="h-3 bg-gray-150 rounded-full w-5/6" />
+                <div key={i} className="h-48 bg-white rounded-2xl p-5 shadow-xs border border-slate-200/70 animate-pulse flex flex-col justify-between relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-slate-200" />
+                  <div className="space-y-3 pt-1">
+                    <div className="flex items-center justify-between">
+                      <div className="h-3.5 bg-slate-200 rounded-full w-20" />
+                      <div className="h-3.5 bg-slate-200 rounded-full w-8" />
+                    </div>
+                    <div className="h-4 bg-slate-200 rounded-full w-3/4" />
+                    <div className="h-3 bg-slate-150 rounded-full w-full" />
+                    <div className="h-3 bg-slate-150 rounded-full w-5/6" />
                   </div>
-                  <div className="h-3 bg-gray-200 rounded-full w-1/3" />
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                    <div className="h-3 bg-slate-200 rounded-full w-1/3" />
+                    <div className="h-3 bg-slate-200 rounded-full w-14" />
+                  </div>
                 </div>
               ))}
             </div>
           ) : notes.length === 0 ? (
             /* Empty State Illustration */
-            <div className="py-12 sm:py-16 text-center bg-white rounded-3xl border border-dashed border-gray-200 p-6 sm:p-8 max-w-md mx-auto shadow-sm my-6">
-              <div className="w-16 h-16 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mx-auto mb-4 text-2xl shadow-inner">
+            <div className="py-14 sm:py-20 text-center bg-white rounded-3xl border border-dashed border-slate-200 p-8 max-w-lg mx-auto shadow-xs my-8">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-50 to-indigo-50 text-purple-600 flex items-center justify-center mx-auto mb-4 text-2xl shadow-inner border border-purple-100/60">
                 <FaFolderOpen />
               </div>
-              <h3 className="text-lg font-bold text-gray-800 mb-1">
+              <h3 className="text-xl font-extrabold text-slate-900 mb-2">
                 No notes found
               </h3>
-              <p className="text-xs text-gray-500 mb-6 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-500 mb-6 leading-relaxed max-w-sm mx-auto">
                 {searchQuery
-                  ? `No matching notes found for "${searchQuery}". Try clearing search.`
+                  ? `No matching notes found for "${searchQuery}". Try adjusting your search term.`
                   : selectedTag
                     ? `No notes currently labeled with #${selectedTag}.`
                     : activeFilter === 'trash'
@@ -254,13 +262,13 @@ const Dashboard = () => {
                         ? 'No archived notes at the moment.'
                         : activeFilter === 'shared'
                           ? 'No notes shared with you yet.'
-                          : 'Start capturing ideas by creating your first note!'}
+                          : 'Start capturing ideas, drafting thoughts, and collaborating with your team!'}
               </p>
               <button
                 onClick={handleCreateNote}
-                className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-xl text-xs shadow-lg hover:brightness-110 transition inline-flex items-center space-x-2"
+                className="px-6 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:brightness-105 active:scale-[0.98] text-white font-bold rounded-xl text-xs sm:text-sm shadow-lg shadow-purple-500/25 transition inline-flex items-center space-x-2 cursor-pointer"
               >
-                <FaPlus />
+                <FaPlus size={11} />
                 <span>Create New Note</span>
               </button>
             </div>
@@ -278,16 +286,16 @@ const Dashboard = () => {
 
           {/* Pagination Controls */}
           {pagination && pagination.totalPages > 1 && (
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-200 pt-4 text-xs font-semibold text-gray-600">
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-200/80 pt-4 text-xs font-semibold text-slate-500">
               <p className="text-center sm:text-left">
                 Showing Page <span className="font-bold text-purple-700">{pagination.currentPage}</span> of{' '}
-                <span className="font-bold">{pagination.totalPages}</span>
+                <span className="font-bold text-slate-800">{pagination.totalPages}</span>
               </p>
               <div className="flex space-x-2">
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                   disabled={!pagination.hasPrevPage}
-                  className="px-3.5 py-1.5 bg-white border rounded-xl hover:bg-gray-50 disabled:opacity-40 font-bold shadow-sm flex items-center space-x-1 min-h-[36px]"
+                  className="px-3.5 py-1.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 font-bold shadow-2xs flex items-center space-x-1 min-h-[36px] transition cursor-pointer"
                 >
                   <FaArrowLeft size={10} />
                   <span>Previous</span>
@@ -295,7 +303,7 @@ const Dashboard = () => {
                 <button
                   onClick={() => setCurrentPage((p) => p + 1)}
                   disabled={!pagination.hasNextPage}
-                  className="px-3.5 py-1.5 bg-white border rounded-xl hover:bg-gray-50 disabled:opacity-40 font-bold shadow-sm flex items-center space-x-1 min-h-[36px]"
+                  className="px-3.5 py-1.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 font-bold shadow-2xs flex items-center space-x-1 min-h-[36px] transition cursor-pointer"
                 >
                   <span>Next</span>
                   <FaArrowRight size={10} />

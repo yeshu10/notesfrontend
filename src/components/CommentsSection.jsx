@@ -410,14 +410,14 @@ const CommentsSection = ({
   };
 
   return (
-    <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-md border border-gray-200 mt-6 font-sans">
+    <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-xs border border-slate-200/80 mt-6 font-sans">
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-4 border-b border-gray-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-4 border-b border-slate-100">
         <div className="flex items-center space-x-2.5">
           <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-sm shadow-inner">
             <FaComments />
           </div>
-          <h3 className="text-sm sm:text-base font-extrabold text-gray-900 tracking-tight">
+          <h3 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">
             Discussion & Comments
           </h3>
           <span className="px-2.5 py-0.5 bg-purple-100 text-purple-800 rounded-full text-xs font-extrabold shadow-xs">

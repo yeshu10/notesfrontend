@@ -68,11 +68,11 @@ const Sidebar = ({ mobileOpen, setMobileOpen, onRefreshNotes }) => {
     };
 
     const content = (
-        <div className="h-full flex flex-col justify-between p-4 bg-white/95 backdrop-blur-md border-r border-purple-100 w-full lg:w-64 shadow-sm">
+        <div className="h-full flex flex-col justify-between p-4 bg-white/90 backdrop-blur-xl border-r border-slate-200/80 w-full lg:w-64 shadow-xs">
             <div className="space-y-6 overflow-y-auto">
                 {/* Navigation Categories */}
                 <div>
-                    <p className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                    <p className="px-3 text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mb-2.5">
                         Navigation
                     </p>
                     <nav className="space-y-1">
@@ -83,13 +83,13 @@ const Sidebar = ({ mobileOpen, setMobileOpen, onRefreshNotes }) => {
                                 <button
                                     key={item.id}
                                     onClick={() => handleFilterClick(item.id)}
-                                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition duration-200 ${isActive
-                                        ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-md'
-                                        : 'text-gray-700 hover:bg-purple-50 hover:text-purple-700'
+                                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition duration-150 cursor-pointer ${isActive
+                                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-sm'
+                                        : 'text-slate-600 hover:bg-purple-50/70 hover:text-purple-700'
                                         }`}
                                 >
                                     <div className="flex items-center space-x-3">
-                                        <Icon className={isActive ? 'text-white' : 'text-purple-500'} />
+                                        <Icon className={isActive ? 'text-white' : 'text-slate-400'} size={14} />
                                         <span>{item.label}</span>
                                     </div>
                                 </button>
@@ -100,26 +100,26 @@ const Sidebar = ({ mobileOpen, setMobileOpen, onRefreshNotes }) => {
 
                 {/* Tags Section */}
                 <div>
-                    <div className="flex items-center justify-between px-3 mb-2">
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                    <div className="flex items-center justify-between px-3 mb-2.5">
+                        <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
                             Tags
                         </p>
                         <button
                             onClick={() => setIsTagModalOpen(true)}
-                            className="text-xs font-semibold text-purple-600 hover:text-purple-800 flex items-center space-x-1 p-1 hover:bg-purple-50 rounded transition"
+                            className="text-xs font-bold text-purple-600 hover:text-purple-800 flex items-center space-x-1 p-1 hover:bg-purple-50 rounded-lg transition cursor-pointer"
                             title="Manage tags"
                         >
-                            <FaPlus size={10} />
+                            <FaPlus size={9} />
                             <span>Manage</span>
                         </button>
                     </div>
 
                     {tags.length === 0 ? (
-                        <div className="px-3 py-3 text-xs text-gray-400 italic bg-purple-50/50 rounded-xl">
+                        <div className="px-3 py-3 text-xs text-slate-400 italic bg-purple-50/40 border border-purple-100/50 rounded-xl">
                             No tags yet.{' '}
                             <button
                                 onClick={() => setIsTagModalOpen(true)}
-                                className="text-purple-600 underline font-medium"
+                                className="text-purple-600 underline font-semibold cursor-pointer"
                             >
                                 Add one
                             </button>
@@ -132,13 +132,13 @@ const Sidebar = ({ mobileOpen, setMobileOpen, onRefreshNotes }) => {
                                     <button
                                         key={tag}
                                         onClick={() => handleTagClick(tag)}
-                                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition ${isTagActive
-                                            ? 'bg-purple-100 text-purple-800 font-bold border border-purple-300'
-                                            : 'text-gray-600 hover:bg-purple-50 hover:text-purple-700'
+                                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${isTagActive
+                                            ? 'bg-purple-50 text-purple-700 font-bold border border-purple-200/80 shadow-2xs'
+                                            : 'text-slate-600 hover:bg-purple-50/50 hover:text-purple-700'
                                             }`}
                                     >
                                         <div className="flex items-center space-x-2 truncate">
-                                            <FaTag className={isTagActive ? 'text-purple-600' : 'text-pink-400'} size={11} />
+                                            <FaTag className={isTagActive ? 'text-purple-600' : 'text-slate-400'} size={10} />
                                             <span className="truncate">{tag}</span>
                                         </div>
                                     </button>
@@ -151,11 +151,11 @@ const Sidebar = ({ mobileOpen, setMobileOpen, onRefreshNotes }) => {
 
             {/* Footer / Empty Trash Option */}
             {activeFilter === 'trash' && (
-                <div className="pt-4 border-t border-gray-100">
+                <div className="pt-4 border-t border-slate-100">
                     <button
                         onClick={handleEmptyTrash}
                         disabled={isEmptyingTrash}
-                        className="w-full flex items-center justify-center space-x-2 px-3 py-2.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-xs font-bold transition disabled:opacity-50"
+                        className="w-full flex items-center justify-center space-x-2 px-3 py-2.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl text-xs font-bold transition disabled:opacity-50 border border-rose-200/60 cursor-pointer"
                     >
                         <FaBroom />
                         <span>{isEmptyingTrash ? 'Emptying...' : 'Empty Trash Now'}</span>
